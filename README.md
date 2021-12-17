@@ -1,2 +1,2 @@
 # reunion
-Help to find the best way to reunion people with multiple constrains.
+Help to find the best way to reunite people with multiple constrains.
