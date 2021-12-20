@@ -1,0 +1,14 @@
+
+Feature:
+Edit Existing Meeting Preference
+Meeting Scheduler
+Meeting Confirmation
+Online Meeting Generation
+Feedback in Website
+    Optional:
+    Collect Feedback After Meeting
+
+
+Infrastructure:
+Docker:
+https://testdriven.io/blog/dockerizing-django-with-postgres-gunicorn-and-nginx/
