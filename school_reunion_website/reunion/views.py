@@ -1,10 +1,12 @@
-from django.http import HttpResponseRedirect
+import uuid
+
+from django.http import HttpResponseRedirect, Http404
 from django.template import loader
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 
-# from .models import Question, Choice
-from .forms import MeetingPreferenceForm
+from .models import Meeting
+from .forms import MeetingPreferenceForm, EntryForm, MeetingGenerationForm
 
 
 def index(request):
@@ -12,7 +14,9 @@ def index(request):
     # context = {
     #     'latest_question_list': latest_question_list,
     # }
-    return render(request, 'reunion/index.html')
+    entry_form = EntryForm()
+    return render(request, 'reunion/index.html', {'entry_form': entry_form,
+                                                  'created_meeting': request.session.get('created_meeting')})
 
 
 def meeting_preference(request):
@@ -20,16 +24,31 @@ def meeting_preference(request):
         form = MeetingPreferenceForm(request.POST)
         if form.is_valid():
             form.save()
+            # Pop success tab and send verification email.
 
-    meeting_form = MeetingPreferenceForm()
-    return render(request, 'reunion/meeting_preference.html', {'form': meeting_form})
+    preference_form = MeetingPreferenceForm()
+    return render(request, 'reunion/meeting_preference.html', {'form': preference_form})
 
 
-# def detail(request, question_id):
-#     question = get_object_or_404(Question, pk=question_id)
-#     return render(request, 'reunion/detail.html', {'question': question})
-#
-#
+def meeting_generation(request):
+    if request.method == 'POST':
+        form = MeetingGenerationForm(request.POST)
+        if form.is_valid():
+            meeting_code = uuid.uuid4()
+            while Meeting.objects.filter(meeting_code=meeting_code).exists():
+                meeting_code = uuid.uuid4()
+            meeting = Meeting()
+            meeting.display_name = request.POST['display_name']
+            meeting.code_max_usage = request.POST['code_max_usage']
+            meeting.contact_email = request.POST['contact_email']
+            meeting.meeting_code = meeting_code
+            meeting.save()
+            request.session['created_meeting'] = str(meeting_code)
+            return redirect('reunion:index')
+    generation_form = MeetingGenerationForm()
+    return render(request, 'reunion/meeting_generation.html', {'form': generation_form})
+
+
 # def results(request, question_id):
 #     question = get_object_or_404(Question, pk=question_id)
 #     return render(request, 'reunion/results.html', {'question': question})

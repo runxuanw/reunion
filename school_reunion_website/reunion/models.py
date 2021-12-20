@@ -12,10 +12,20 @@ from django.db import models
 #     votes = models.IntegerField(default=0)
 
 
+class Meeting(models.Model):
+    meeting_code = models.UUIDField(primary_key=True)
+    display_name = models.CharField(max_length=100)
+    code_max_usage = models.IntegerField()
+    contact_email = models.EmailField()
+
+    def __str__(self):
+        return f'meeting {self.meeting_code}'
+
+
 class MeetingPreference(models.Model):
     name = models.CharField(max_length=30)
     email = models.EmailField()
-    meeting = models.CharField(max_length=50)
+    meeting = models.ForeignKey(Meeting, on_delete=models.PROTECT)
     # Time and location:
     preferred_attending_frequency_in_months = models.IntegerField(null=True)
     repeated_available_holidays = models.TextField(null=True)
@@ -39,6 +49,9 @@ class MeetingPreference(models.Model):
     minimal_meeting_value = models.IntegerField(default=1)
     # In case minimal_meeting_value doesn't cover edge cases.
     minimal_meeting_size = models.IntegerField(default=2)
+
+    def __str__(self):
+        return f'meeting preference for {self.meeting}'
 
     class Meta:
         unique_together = (("meeting", "name"),)

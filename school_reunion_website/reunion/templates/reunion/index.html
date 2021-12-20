@@ -1,14 +1,15 @@
 {% load static %}
 
 <link rel="stylesheet" type="text/css" href="{% static 'reunion/style.css' %}">
-blablabla
-<!--{% if latest_question_list %}-->
-<!--<ul>-->
-<!--    {% for question in latest_question_list %}-->
-<!--    <li><a href="/reunion/{{ question.id }}/">{{ question.question_text }}</a></li>-->
-<!--    <li><a href="{% url 'reunion:results' question.id %}">{{ question.question_text }}</a></li>-->
-<!--    {% endfor %}-->
-<!--</ul>-->
-<!--{% else %}-->
-<!--<p>No polls are available.</p>-->
-<!--{% endif %}-->
+
+<form action="{% url 'reunion:meeting_preference' %}" method="post">
+    {% csrf_token %}
+    {{ entry_form }}
+    <button type="submit">JOIN</button>
+</form>
+
+<form action="{% url 'reunion:meeting_generation' %}" method="get">
+    <button type="submit">Create New Meeting</button>
+</form>
+
+{% if created_meeting %}<p><strong>Created Meeting with Code: {{ created_meeting }}</strong></p>{% endif %}

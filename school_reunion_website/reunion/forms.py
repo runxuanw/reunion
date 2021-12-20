@@ -1,7 +1,41 @@
 from django import forms
-from .models import MeetingPreference
+from .models import MeetingPreference, Meeting
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit
+
+
+class EntryForm(forms.Form):
+    meeting_code = forms.CharField(required=True)
+    registered_attendant_code = forms.CharField(required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            'meeting_code',
+            'registered_attendant_code',
+            Submit('submit', 'Submit', css_class='bin-success')
+        )
+
+
+class MeetingGenerationForm(forms.ModelForm):
+    class Meta:
+        model = Meeting
+        fields = ('display_name', 'code_max_usage', 'contact_email')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            'display_name',
+            'code_max_usage',
+            'contact_email',
+            Submit('submit', 'Submit', css_class='bin-success')
+        )
 
 
 class MeetingPreferenceForm(forms.ModelForm):
