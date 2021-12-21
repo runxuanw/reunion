@@ -12,4 +12,5 @@
     <button type="submit">Create New Meeting</button>
 </form>
 
-{% if created_meeting %}<p><strong>Created Meeting with Code: {{ created_meeting }}</strong></p>{% endif %}
+<!--todo, make pop_message as windowed notification.-->
+{% if pop_message %}<p><strong>{{ pop_message }}</strong></p>{% endif %}
