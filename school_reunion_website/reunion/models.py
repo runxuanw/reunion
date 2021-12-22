@@ -18,6 +18,7 @@ class MeetingPreference(models.Model):
 
     name = models.CharField(max_length=30)
     email = models.EmailField()
+    email_verification_code = models.TextField(db_index=True, unique=True)
     # Time and location:
     preferred_attending_frequency_in_months = models.IntegerField()
     repeated_available_holidays = models.TextField(blank=True)

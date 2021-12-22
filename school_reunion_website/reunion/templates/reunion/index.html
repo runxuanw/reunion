@@ -5,7 +5,7 @@
 <form action="{% url 'reunion:meeting_preference' %}" method="post">
     {% csrf_token %}
     {{ entry_form }}
-    <button type="submit">JOIN</button>
+    <button type="submit">JOIN MEETING/UPDATE PREFERENCE</button>
 </form>
 
 <form action="{% url 'reunion:meeting_generation' %}" method="get">

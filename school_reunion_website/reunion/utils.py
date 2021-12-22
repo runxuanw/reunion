@@ -5,6 +5,9 @@ from django.db import models
 from typing import Optional
 
 
+VERIFIED_EMAIL_STATUS = 'Verified'
+
+
 @dataclasses.dataclass
 class ValidForm:
     name: str

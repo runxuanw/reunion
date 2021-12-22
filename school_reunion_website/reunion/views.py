@@ -2,7 +2,8 @@ import uuid
 
 from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
-from .utils import valid_request_from_forms, record_new_meeting_preference
+from .utils import valid_request_from_forms, record_new_meeting_preference, VERIFIED_EMAIL_STATUS
+from .emails import verify_registered_email_address
 
 from .models import Meeting, MeetingPreference
 from .forms import MeetingPreferenceForm, EntryForm, MeetingGenerationForm
@@ -25,7 +26,7 @@ def index(request):
 def meeting_preference(request):
     if request.method == 'POST':
         valid_form = valid_request_from_forms(request.POST, [MeetingPreferenceForm, EntryForm], get_model=True)
-        # currently, must all fields of MeetingPreferenceForm are filled, then it will be valid.
+        # todo: currently, must all fields of MeetingPreferenceForm are filled, then it will be valid
         print('MeetingPreferenceForm== debug== '+str(MeetingPreferenceForm(request.POST).is_valid()))
 
         meeting_code = request.POST.get('meeting_code', request.session.get('meeting_code'))
@@ -49,17 +50,23 @@ def meeting_preference(request):
                 meeting.code_available_usage -= 1
                 preference.registered_attendant_code = str(registered_attendant_code)
                 preference.meeting_id = meeting_code
+                preference.email_verification_code = (
+                    f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
+                # todo, record attendant's information after encryption
                 record_new_meeting_preference(meeting, preference)
                 lock.release()
-                # todo: Pop message with attendant id and send verification email.
-                request.session['pop_message'] = f'Thank you for registration!' \
-                                                 f'\nYour Registered Attendant Code is: {registered_attendant_code}'
+
+                verify_registered_email_address(preference, meeting.display_name)
+                request.session['pop_message'] = (f'Thank you for registration!'
+                                                  f'\nYour Registered Attendant Code is: {registered_attendant_code}'
+                                                  f'\nPlease check your inbox for verification email '
+                                                  f'to complete the registration.')
+
                 return redirect('reunion:index')
             else:
                 preference.registered_attendant_code = registered_attendant_code
                 preference.meeting_id = meeting_code
                 preference.save()
-                # todo: Pop success tab.
                 request.session['pop_message'] = f'Your change is saved!'
                 return redirect('reunion:index')
 
@@ -67,11 +74,11 @@ def meeting_preference(request):
             request.session['meeting_code'] = meeting_code
             meeting_preference_form = MeetingPreferenceForm()
             if registered_attendant_code:
-                print("debug== entry_form.registered_attendant_code " + str(request.POST.get('registered_attendant_code')))
-                request.session['registered_attendant_code'] = registered_attendant_code
                 preference = get_object_or_404(MeetingPreference, pk=registered_attendant_code)
+                request.session['registered_attendant_code'] = registered_attendant_code
                 meeting_preference_form = MeetingPreferenceForm(instance=preference)
-            return render(request, 'reunion/meeting_preference.html', {'form': meeting_preference_form})
+            return render(request, 'reunion/meeting_preference.html', {'form': meeting_preference_form,
+                                                                       'meeting_name': meeting.display_name})
 
 
 def meeting_generation(request):
@@ -92,3 +99,12 @@ def meeting_generation(request):
         return redirect('reunion:index')
     generation_form = MeetingGenerationForm()
     return render(request, 'reunion/meeting_generation.html', {'form': generation_form})
+
+
+def email_verification(request, verification_code):
+    if request.method == 'GET':
+        preference = get_object_or_404(MeetingPreference, email_verification_code=verification_code)
+        meeting = get_object_or_404(Meeting, pk=preference.meeting_id)
+        preference.email_verification_code = VERIFIED_EMAIL_STATUS
+        preference.save()
+        return render(request, 'reunion/email_verification.html', {'meeting_name': meeting.display_name})

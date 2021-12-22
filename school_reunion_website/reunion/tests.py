@@ -4,6 +4,36 @@ from django.test import TestCase
 from django.test import Client
 from .models import Meeting, MeetingPreference
 import uuid
+from django.core import mail
+from .emails import SCHOOL_REUNION_ADMIN_EMAIL
+from .utils import VERIFIED_EMAIL_STATUS
+
+
+TESTING_EMAIL_ADDRESS = 'school.reunion.testing@gmail.com'
+
+
+def _create_new_preference_form(client, meeting_code):
+    session = client.session
+    session['meeting_code'] = meeting_code
+    session.save()
+    return client.post(
+        path='/meeting_preference/',
+        data={
+            'name': 'fake_name',
+            'email': TESTING_EMAIL_ADDRESS,
+            'preferred_attending_frequency_in_months': '12',
+            'repeated_available_holidays': '12',
+            'repeated_available_dates_each_year': '12',
+            'one_time_available_dates': '12',
+            'acceptable_meeting_time_range_in_day': '12',
+            'expected_attending_time_zones': '12',
+            'acceptable_offline_meeting_locations': '12',
+            'preferred_meeting_duration_in_hour': '12',
+            'acceptable_meeting_methods': '12',
+            'preferred_meeting_activities': '12',
+            'weighted_attendants': '12',
+            'minimal_meeting_value': '1',
+            'minimal_meeting_size': '2'})
 
 
 class MeetingPreferenceViewTests(TestCase):
@@ -14,32 +44,28 @@ class MeetingPreferenceViewTests(TestCase):
         Meeting.objects.create(meeting_code=self.meeting_code, display_name='test meeting',
                                code_max_usage=2, code_available_usage=2, contact_email='test@test.com')
 
-    def test_add_new_record_after_new_meeting_preference_form_submitted(self):
+    def test_add_new_record_and_verify_email_after_new_meeting_preference_form_submitted(self):
         """
         meeting_preference() with proper post request will have preference recorded.
         """
         self.assertEqual(Meeting.objects.get(meeting_code=self.meeting_code).display_name, 'test meeting')
-        session = self.client.session
-        session['meeting_code'] = self.meeting_code
-        session.save()
-        response = self.client.post(
-            path='/meeting_preference/',
-            data={
-                'name': 'fake_name',
-                'email': '123@gmail.com',
-                'preferred_attending_frequency_in_months': '12',
-                'repeated_available_holidays': '12',
-                'repeated_available_dates_each_year': '12',
-                'one_time_available_dates': '12',
-                'acceptable_meeting_time_range_in_day': '12',
-                'expected_attending_time_zones': '12',
-                'acceptable_offline_meeting_locations': '12',
-                'preferred_meeting_duration_in_hour': '12',
-                'acceptable_meeting_methods': '12',
-                'preferred_meeting_activities': '12',
-                'weighted_attendants': '12',
-                'minimal_meeting_value': '1',
-                'minimal_meeting_size': '2'})
+        response = _create_new_preference_form(self.client, self.meeting_code)
+
+        preference = MeetingPreference.objects.get(meeting_id=self.meeting_code)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Meeting.objects.get(meeting_code=self.meeting_code).code_available_usage, 1)
-        self.assertEqual(MeetingPreference.objects.get(meeting_id=self.meeting_code).name, 'fake_name')
+        self.assertEqual(preference.name, 'fake_name')
+        self.assertEqual(len(preference.email_verification_code), 128)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].from_email, SCHOOL_REUNION_ADMIN_EMAIL)
+        self.assertEqual(mail.outbox[0].to, [TESTING_EMAIL_ADDRESS])
+        self.assertTrue((preference.email_verification_code in mail.outbox[0].body))
+
+    def test_email_verification_status_change_to_pass_after_click_the_generated_link(self):
+        _create_new_preference_form(self.client, self.meeting_code)
+        preference = MeetingPreference.objects.get(meeting_id=self.meeting_code)
+        response = self.client.get(path=f'/email_verification/{preference.email_verification_code}')
+
+        preference = MeetingPreference.objects.get(meeting_id=self.meeting_code)
+        self.assertEqual(preference.email_verification_code, VERIFIED_EMAIL_STATUS)
+        self.assertEqual(response.status_code, 200)

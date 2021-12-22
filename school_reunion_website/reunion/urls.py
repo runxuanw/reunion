@@ -14,5 +14,6 @@ urlpatterns = [
     # path('<int:question_id>/vote/', views.vote, name='vote'),
 
     path('meeting_preference/', views.meeting_preference, name='meeting_preference'),
-    path('meeting_generation/', views.meeting_generation, name='meeting_generation')
+    path('meeting_generation/', views.meeting_generation, name='meeting_generation'),
+    path('email_verification/<str:verification_code>', views.email_verification, name='email_verification')
 ]

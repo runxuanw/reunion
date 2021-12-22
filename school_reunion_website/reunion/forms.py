@@ -41,7 +41,7 @@ class MeetingGenerationForm(forms.ModelForm):
 class MeetingPreferenceForm(forms.ModelForm):
     class Meta:
         model = MeetingPreference
-        exclude = ('registered_attendant_code', 'meeting')
+        exclude = ('registered_attendant_code', 'meeting', 'email_verification_code')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
