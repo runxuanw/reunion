@@ -2,6 +2,36 @@ from django import forms
 from .models import MeetingPreference, Meeting
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit
+from .utils import get_country_to_holidays_map
+
+
+class SelectWithAttribute(forms.widgets.Select):
+    """
+    Select With Option Attributes:
+        subclass of Django's Select widget that allows attributes in options,
+        like disabled="disabled", title="help text", class="some classes",
+              style="background: color;"...
+
+    Pass a dict instead of a string for its label:
+        choices = [ ('value_1', 'label_1'),
+                    ...
+                    ('value_k', {'label': 'label_k', 'foo': 'bar', ...}),
+                    ... ]
+    The option k will be rendered as:
+        <option value="value_k" foo="bar" ...>label_k</option>
+    """
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        if isinstance(label, dict):
+            opt_attrs = label.copy()
+            label = opt_attrs.pop('label')
+        else:
+            opt_attrs = {}
+        option_dict = super(SelectWithAttribute, self).create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs)
+        for key, val in opt_attrs.items():
+            option_dict['attrs'][key] = val
+        return option_dict
 
 
 class EntryForm(forms.Form):
@@ -43,6 +73,21 @@ class MeetingPreferenceForm(forms.ModelForm):
         model = MeetingPreference
         exclude = ('registered_attendant_code', 'meeting', 'email_verification_code')
 
+    country_to_holidays = get_country_to_holidays_map()
+    country = forms.ChoiceField(choices=tuple([(country, country) for country, _ in country_to_holidays.items()]))
+    choices = []
+    for country_name, holidays in country_to_holidays.items():
+        choices.append((f'{country_name}_0',
+                        {'label': f'Select All {country_name} Holidays',
+                         'class': country_name,
+                         'style': 'display: none'}))
+        for idx, (date, holiday_name) in enumerate(holidays.items()):
+            choices.append((f'{country_name}_{idx+1}',
+                            {'label': f'{date} {holiday_name}',
+                             'class': country_name,
+                             'style': 'display: none'}))
+    holiday = forms.ChoiceField(choices=tuple(choices), widget=SelectWithAttribute)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -52,6 +97,8 @@ class MeetingPreferenceForm(forms.ModelForm):
             'name',
             'email',
             'preferred_attending_frequency_in_months',
+            'country',
+            'holiday',
             'repeated_available_holidays',
             'repeated_available_dates_each_year',
             'one_time_available_dates',

@@ -3,6 +3,9 @@ from django.http import Http404
 import dataclasses
 from django.db import models
 from typing import Optional
+import holidays
+import pycountry
+import datetime
 
 
 VERIFIED_EMAIL_STATUS = 'Verified'
@@ -36,3 +39,23 @@ def valid_request_from_forms(post_request, candidate_forms, raise_if_not_found=T
 def record_new_meeting_preference(meeting, preference):
     meeting.save()
     preference.save()
+
+
+def get_country_to_holidays_map():
+    """Returns {country name: list of holidays}."""
+    country_code_map = {}
+    for country in pycountry.countries:
+        country_code_map[country.alpha_2] = country.name
+        country_code_map[country.alpha_3] = country.name
+
+    country_to_holidays_map = {}
+    holiday_countries = holidays.list_supported_countries()
+    for country in holiday_countries:
+        country_holidays = holidays.CountryHoliday(
+            country=country, years=datetime.datetime.utcnow().year)
+        if country.isupper():
+            country_name = country_code_map.get(country, country).replace(' ', '_')
+            country_to_holidays_map[country_name] = country_holidays
+        else:
+            country_to_holidays_map[country.replace(' ', '_')] = country_holidays
+    return country_to_holidays_map
