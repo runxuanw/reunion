@@ -21,12 +21,11 @@ class MeetingPreference(models.Model):
     email_verification_code = models.TextField(db_index=True, unique=True)
     # Time and location:
     preferred_attending_frequency_in_months = models.IntegerField()
-    repeated_available_holidays = models.TextField(blank=True)
-    repeated_available_dates_each_year = models.TextField(blank=True)
-    one_time_available_dates = models.TextField(blank=True)
-    acceptable_meeting_time_range_in_day = models.CharField(max_length=50, blank=True)
+    selected_attending_dates = models.TextField(blank=True)
+    earliest_meeting_time = models.CharField(max_length=50, blank=True)
+    latest_meeting_time = models.CharField(max_length=50, blank=True)
     # For both online and offline.
-    expected_attending_time_zones = models.CharField(max_length=300, blank=True)
+    expected_attending_time_zone = models.CharField(max_length=300, blank=True)
     acceptable_offline_meeting_locations = models.TextField(blank=True)
     preferred_meeting_duration_in_hour = models.DurationField(blank=True)
 

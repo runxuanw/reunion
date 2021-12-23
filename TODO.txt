@@ -1,6 +1,5 @@
 
 Feature:
-Edit Existing Meeting Preference
 Meeting Scheduler
 Meeting Confirmation
 Online Meeting Generation

@@ -1,8 +1,11 @@
 from django import forms
 from .models import MeetingPreference, Meeting
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit
+from crispy_forms.bootstrap import InlineRadios, FormActions, InlineCheckboxes
+from bootstrap_datepicker_plus.widgets import TimePickerInput
+from crispy_forms.layout import Layout, Submit, Row, Column, Field
 from .utils import get_country_to_holidays_map
+from taggit.forms import TagField, TagWidget
 
 
 class SelectWithAttribute(forms.widgets.Select):
@@ -87,6 +90,24 @@ class MeetingPreferenceForm(forms.ModelForm):
                              'class': country_name,
                              'style': 'display: none'}))
     holiday = forms.ChoiceField(choices=tuple(choices), widget=SelectWithAttribute)
+    custom_dates = forms.DateField(widget=forms.DateInput)
+    repeat_option_for_adding_custom_dates = forms.ChoiceField(
+        choices=[('repeat_each_year', 'repeat each year'),
+                 ('repeat_each_month', 'repeat each month'),
+                 ('repeat_each_week', 'repeat each week'),
+                 ('no_repeat', 'no repeat')],
+        widget=forms.RadioSelect)
+
+    earliest_meeting_time = forms.TimeField(widget=TimePickerInput())
+    latest_meeting_time = forms.TimeField(widget=TimePickerInput())
+    expected_attending_time_zone = forms.ChoiceField(
+        choices=[(i-12, f'UTC{i-12 if i < 12 else f"+{i-12}"}') for i in reversed(range(25))]
+    )
+    acceptable_meeting_methods = forms.MultipleChoiceField(
+        choices=[('online', 'online'), ('offline', 'offline')],
+        widget=forms.CheckboxSelectMultiple)
+
+    selected_attending_dates = TagField(widget=TagWidget)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,22 +115,40 @@ class MeetingPreferenceForm(forms.ModelForm):
         self.helper = FormHelper
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
-            'name',
-            'email',
-            'preferred_attending_frequency_in_months',
-            'country',
-            'holiday',
-            'repeated_available_holidays',
-            'repeated_available_dates_each_year',
-            'one_time_available_dates',
-            'acceptable_meeting_time_range_in_day',
-            'expected_attending_time_zones',
+            Row(
+                Column('name', css_class='form-group col-md-4 mb-0'),
+                Column('email', css_class='form-group col-md-4 mb-0'),
+                Column('preferred_attending_frequency_in_months', css_class='form-group col-md-4 mb-0'),
+                css_class='form-row',
+            ),
+
+            Row(
+                Column('country', css_class='form-group col-md-4 mb-0'),
+                Column('holiday', css_class='form-group col-md-8 mb-0'),
+                css_class='form-row',
+            ),
+            InlineRadios('repeat_option_for_adding_custom_dates'),
+            'custom_dates',
+            'selected_attending_dates',
+
+            Row(
+                Column('earliest_meeting_time', css_class='form-group col-md-3 mb-0'),
+                Column('latest_meeting_time', css_class='form-group col-md-3 mb-0'),
+                Column('expected_attending_time_zone', css_class='form-group col-md-3 mb-0'),
+                Column('preferred_meeting_duration_in_hour', css_class='form-group col-md-3 mb-0'),
+                css_class='form-row',
+            ),
+
+            InlineCheckboxes('acceptable_meeting_methods'),
             'acceptable_offline_meeting_locations',
-            'preferred_meeting_duration_in_hour',
-            'acceptable_meeting_methods',
             'preferred_meeting_activities',
             'weighted_attendants',
-            'minimal_meeting_value',
-            'minimal_meeting_size',
-            Submit('submit', 'Submit', css_class='bin-success')
+
+            Row(
+                Column('minimal_meeting_value', css_class='form-group col-md-6 mb-0'),
+                Column('minimal_meeting_size', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row',
+            ),
+
+            FormActions(Submit('submit', 'Submit', css_class='bin-success'))
         )

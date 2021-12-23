@@ -3,4 +3,6 @@ $(document).ready(function() {
         $("#id_holiday").children('option').hide();
         $("#id_holiday").children("." + $(this).val()).show();
     });
+
+    $('input[name="custom_dates"]').daterangepicker();
 })

@@ -7,3 +7,7 @@ https://docs.djangoproject.com/en/4.0/intro/tutorial02/
 
 crispy form tutorial
 https://www.youtube.com/watch?v=3XOS_UpJirU
+
+Host Email Setup:
+https://docs.djangoproject.com/en/4.0/topics/email/
+(for Gmail, use app password https://support.google.com/accounts/answer/185833)
