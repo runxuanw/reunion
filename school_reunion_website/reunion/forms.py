@@ -97,6 +97,7 @@ class MeetingPreferenceForm(forms.ModelForm):
                  ('repeat_each_week', 'repeat each week'),
                  ('no_repeat', 'no repeat')],
         widget=forms.RadioSelect)
+    selected_attending_dates = TagField(widget=TagWidget)
 
     earliest_meeting_time = forms.TimeField(widget=TimePickerInput())
     latest_meeting_time = forms.TimeField(widget=TimePickerInput())
@@ -104,10 +105,10 @@ class MeetingPreferenceForm(forms.ModelForm):
         choices=[(i-12, f'UTC{i-12 if i < 12 else f"+{i-12}"}') for i in reversed(range(25))]
     )
     acceptable_meeting_methods = forms.MultipleChoiceField(
-        choices=[('online', 'online'), ('offline', 'offline')],
+        choices=[('online', 'Online'), ('offline', 'Offline')],
         widget=forms.CheckboxSelectMultiple)
 
-    selected_attending_dates = TagField(widget=TagWidget)
+    acceptable_offline_meeting_cities = TagField(widget=TagWidget)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,7 +119,7 @@ class MeetingPreferenceForm(forms.ModelForm):
             Row(
                 Column('name', css_class='form-group col-md-4 mb-0'),
                 Column('email', css_class='form-group col-md-4 mb-0'),
-                Column('preferred_attending_frequency_in_months', css_class='form-group col-md-4 mb-0'),
+                Column('prefer_to_attend_every_n_months', css_class='form-group col-md-4 mb-0'),
                 css_class='form-row',
             ),
 
@@ -140,7 +141,7 @@ class MeetingPreferenceForm(forms.ModelForm):
             ),
 
             InlineCheckboxes('acceptable_meeting_methods'),
-            'acceptable_offline_meeting_locations',
+            'acceptable_offline_meeting_cities',
             'preferred_meeting_activities',
             'weighted_attendants',
 
