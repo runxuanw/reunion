@@ -3,7 +3,7 @@ from .models import MeetingPreference, Meeting
 from crispy_forms.helper import FormHelper
 from crispy_forms.bootstrap import InlineRadios, FormActions, InlineCheckboxes
 from bootstrap_datepicker_plus.widgets import TimePickerInput
-from crispy_forms.layout import Layout, Submit, Row, Column, Field
+from crispy_forms.layout import Layout, Submit, Row, Column, Field, Button
 from .utils import get_country_to_holidays_map
 from taggit.forms import TagField, TagWidget
 
@@ -77,7 +77,8 @@ class MeetingPreferenceForm(forms.ModelForm):
         exclude = ('registered_attendant_code', 'meeting', 'email_verification_code')
 
     country_to_holidays = get_country_to_holidays_map()
-    country = forms.ChoiceField(choices=tuple([(country, country) for country, _ in country_to_holidays.items()]))
+    country = forms.ChoiceField(
+        choices=tuple([(country, country) for country, _ in country_to_holidays.items()]), required=False)
     choices = []
     for country_name, holidays in country_to_holidays.items():
         choices.append((f'{country_name}_0',
@@ -89,26 +90,36 @@ class MeetingPreferenceForm(forms.ModelForm):
                             {'label': f'{date} {holiday_name}',
                              'class': country_name,
                              'style': 'display: none'}))
-    holiday = forms.ChoiceField(choices=tuple(choices), widget=SelectWithAttribute)
-    custom_dates = forms.DateField(widget=forms.DateInput)
+    holiday = forms.ChoiceField(label='Holiday (repeat each year)',
+                                choices=tuple(choices),
+                                widget=SelectWithAttribute,
+                                required=False)
+    custom_dates = forms.DateField(widget=forms.DateInput, required=False)
     repeat_option_for_adding_custom_dates = forms.ChoiceField(
         choices=[('repeat_each_year', 'repeat each year'),
                  ('repeat_each_month', 'repeat each month'),
                  ('repeat_each_week', 'repeat each week'),
                  ('no_repeat', 'no repeat')],
-        widget=forms.RadioSelect)
+        widget=forms.RadioSelect,
+        required=False)
     selected_attending_dates = TagField(widget=TagWidget)
 
     earliest_meeting_time = forms.TimeField(widget=TimePickerInput())
     latest_meeting_time = forms.TimeField(widget=TimePickerInput())
-    expected_attending_time_zone = forms.ChoiceField(
+    attending_time_zone = forms.ChoiceField(
         choices=[(i-12, f'UTC{i-12 if i < 12 else f"+{i-12}"}') for i in reversed(range(25))]
     )
+    preferred_meeting_duration_in_hour = forms.FloatField()
     acceptable_meeting_methods = forms.MultipleChoiceField(
         choices=[('online', 'Online'), ('offline', 'Offline')],
-        widget=forms.CheckboxSelectMultiple)
+        widget=forms.CheckboxSelectMultiple,
+        required=False)
 
     acceptable_offline_meeting_cities = TagField(widget=TagWidget)
+
+    other_attendant = forms.CharField(label='Other Attendant (press enter to add)', required=False)
+    other_attendant_weight = forms.FloatField(label='Attendant Value (default 1; press enter to add)', required=False)
+    weighted_attendants = TagField(widget=TagWidget, label='Special valued attendants', required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -128,14 +139,20 @@ class MeetingPreferenceForm(forms.ModelForm):
                 Column('holiday', css_class='form-group col-md-8 mb-0'),
                 css_class='form-row',
             ),
-            InlineRadios('repeat_option_for_adding_custom_dates'),
-            'custom_dates',
+            Row(
+                Column(InlineRadios('repeat_option_for_adding_custom_dates'), css_class='form-group col-md-6 mb-0'),
+                Column('custom_dates', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row',
+            ),
+
+            # 'repeat_option_for_adding_custom_dates',
+            # 'custom_dates',
             'selected_attending_dates',
 
             Row(
                 Column('earliest_meeting_time', css_class='form-group col-md-3 mb-0'),
                 Column('latest_meeting_time', css_class='form-group col-md-3 mb-0'),
-                Column('expected_attending_time_zone', css_class='form-group col-md-3 mb-0'),
+                Column('attending_time_zone', css_class='form-group col-md-3 mb-0'),
                 Column('preferred_meeting_duration_in_hour', css_class='form-group col-md-3 mb-0'),
                 css_class='form-row',
             ),
@@ -143,8 +160,13 @@ class MeetingPreferenceForm(forms.ModelForm):
             InlineCheckboxes('acceptable_meeting_methods'),
             'acceptable_offline_meeting_cities',
             'preferred_meeting_activities',
-            'weighted_attendants',
 
+            Row(
+                Column('other_attendant', css_class='form-group col-md-6 mb-0'),
+                Column('other_attendant_weight', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row',
+            ),
+            'weighted_attendants',
             Row(
                 Column('minimal_meeting_value', css_class='form-group col-md-6 mb-0'),
                 Column('minimal_meeting_size', css_class='form-group col-md-6 mb-0'),

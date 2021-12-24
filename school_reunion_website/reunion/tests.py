@@ -26,7 +26,7 @@ def _create_new_preference_form(client, meeting_code):
             'repeated_available_dates_each_year': '12',
             'one_time_available_dates': '12',
             'acceptable_meeting_time_range_in_day': '12',
-            'expected_attending_time_zone': '12',
+            'attending_time_zone': '12',
             'acceptable_offline_meeting_cities': '12',
             'preferred_meeting_duration_in_hour': '12',
             'acceptable_meeting_methods': '12',

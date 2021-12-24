@@ -25,7 +25,7 @@ class MeetingPreference(models.Model):
     earliest_meeting_time = models.CharField(max_length=50, blank=True)
     latest_meeting_time = models.CharField(max_length=50, blank=True)
     # For both online and offline.
-    expected_attending_time_zone = models.CharField(max_length=300, blank=True)
+    attending_time_zone = models.CharField(max_length=300, blank=True)
     acceptable_offline_meeting_cities = models.TextField(blank=True)
     preferred_meeting_duration_in_hour = models.DurationField(blank=True)
 
