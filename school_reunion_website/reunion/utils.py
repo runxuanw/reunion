@@ -30,6 +30,10 @@ def valid_request_from_forms(post_request, candidate_forms, raise_if_not_found=T
                 except:
                     pass
             return ValidForm(name=form_instance.__class__.__name__, model=model)
+        else:
+            print(f'\n====debug invalid form {candidate_form.__name__}====')
+            print(form_instance.errors)
+            print(form_instance.non_field_errors)
     if raise_if_not_found:
         raise Http404('Not valid form entry.')
     return ''
@@ -53,9 +57,12 @@ def get_country_to_holidays_map():
     for country in holiday_countries:
         country_holidays = holidays.CountryHoliday(
             country=country, years=datetime.datetime.utcnow().year)
+        country_name = country
         if country.isupper():
-            country_name = country_code_map.get(country, country).replace(' ', '_')
+            country_name = country_code_map.get(country)
+        if country_name and (country_name[1:].islower() or (' ' in country_name)):
             country_to_holidays_map[country_name] = country_holidays
-        else:
-            country_to_holidays_map[country.replace(' ', '_')] = country_holidays
     return country_to_holidays_map
+
+
+get_country_to_holidays_map()

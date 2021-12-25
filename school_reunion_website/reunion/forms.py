@@ -81,14 +81,15 @@ class MeetingPreferenceForm(forms.ModelForm):
         choices=tuple([(country, country) for country, _ in country_to_holidays.items()]), required=False)
     choices = []
     for country_name, holidays in country_to_holidays.items():
+        class_name = country_name.replace(' ', '_')
         choices.append((f'{country_name}_0',
                         {'label': f'Select All {country_name} Holidays',
-                         'class': country_name,
+                         'class': class_name,
                          'style': 'display: none'}))
         for idx, (date, holiday_name) in enumerate(holidays.items()):
             choices.append((f'{country_name}_{idx+1}',
-                            {'label': f'{date} {holiday_name}',
-                             'class': country_name,
+                            {'label': f'{holiday_name} {date}',
+                             'class': class_name,
                              'style': 'display: none'}))
     holiday = forms.ChoiceField(label='Holiday (repeat each year)',
                                 choices=tuple(choices),
@@ -106,10 +107,10 @@ class MeetingPreferenceForm(forms.ModelForm):
 
     earliest_meeting_time = forms.TimeField(widget=TimePickerInput())
     latest_meeting_time = forms.TimeField(widget=TimePickerInput())
-    attending_time_zone = forms.ChoiceField(
+    online_attending_time_zone = forms.ChoiceField(
         choices=[(i-12, f'UTC{i-12 if i < 12 else f"+{i-12}"}') for i in reversed(range(25))]
     )
-    preferred_meeting_duration_in_hour = forms.FloatField()
+    preferred_meeting_duration = forms.TimeField(widget=TimePickerInput())
     acceptable_meeting_methods = forms.MultipleChoiceField(
         choices=[('online', 'Online'), ('offline', 'Offline')],
         widget=forms.CheckboxSelectMultiple,
@@ -152,8 +153,8 @@ class MeetingPreferenceForm(forms.ModelForm):
             Row(
                 Column('earliest_meeting_time', css_class='form-group col-md-3 mb-0'),
                 Column('latest_meeting_time', css_class='form-group col-md-3 mb-0'),
-                Column('attending_time_zone', css_class='form-group col-md-3 mb-0'),
-                Column('preferred_meeting_duration_in_hour', css_class='form-group col-md-3 mb-0'),
+                Column('online_attending_time_zone', css_class='form-group col-md-3 mb-0'),
+                Column('preferred_meeting_duration', css_class='form-group col-md-3 mb-0'),
                 css_class='form-row',
             ),
 

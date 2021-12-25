@@ -7,6 +7,7 @@ import uuid
 from django.core import mail
 from .emails import SCHOOL_REUNION_ADMIN_EMAIL
 from .utils import VERIFIED_EMAIL_STATUS
+from django.utils import dateparse
 
 
 TESTING_EMAIL_ADDRESS = 'school.reunion.testing@gmail.com'
@@ -22,14 +23,13 @@ def _create_new_preference_form(client, meeting_code):
             'name': 'fake_name',
             'email': TESTING_EMAIL_ADDRESS,
             'prefer_to_attend_every_n_months': '12',
-            'repeated_available_holidays': '12',
-            'repeated_available_dates_each_year': '12',
-            'one_time_available_dates': '12',
-            'acceptable_meeting_time_range_in_day': '12',
-            'attending_time_zone': '12',
+            'selected_attending_dates': 'dummy_attending_dates',
+            'earliest_meeting_time': '00:12',
+            'latest_meeting_time': '00:12',
+            'online_attending_time_zone': '12',
             'acceptable_offline_meeting_cities': '12',
-            'preferred_meeting_duration_in_hour': '12',
-            'acceptable_meeting_methods': '12',
+            'preferred_meeting_duration': '00:12',
+            'acceptable_meeting_methods': ['online', 'offline'],
             'preferred_meeting_activities': '12',
             'weighted_attendants': '12',
             'minimal_meeting_value': '1',

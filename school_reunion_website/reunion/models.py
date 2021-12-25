@@ -22,12 +22,12 @@ class MeetingPreference(models.Model):
     # Time and location:
     prefer_to_attend_every_n_months = models.IntegerField()
     selected_attending_dates = models.TextField(blank=True)
-    earliest_meeting_time = models.CharField(max_length=50, blank=True)
-    latest_meeting_time = models.CharField(max_length=50, blank=True)
+    earliest_meeting_time = models.TimeField(max_length=50, blank=True)
+    latest_meeting_time = models.TimeField(max_length=50, blank=True)
     # For both online and offline.
-    attending_time_zone = models.CharField(max_length=300, blank=True)
+    online_attending_time_zone = models.CharField(max_length=300, blank=True)
     acceptable_offline_meeting_cities = models.TextField(blank=True)
-    preferred_meeting_duration_in_hour = models.DurationField(blank=True)
+    preferred_meeting_duration = models.TimeField(blank=True)
 
     acceptable_meeting_methods = models.CharField(max_length=30, blank=True)
     preferred_meeting_activities = models.CharField(max_length=300, blank=True)

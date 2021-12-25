@@ -55,8 +55,21 @@ $(document).ready(function() {
         acceptable_offline_meeting_cities.whitelist = data;
     });
 
+//    $("#id_country").change(function() {
+//        $("#id_holiday").children('option').hide();
+//        $("#id_holiday").children("." + $(this).val().replace(/\s+/g, '_')).show();
+//    });
+
+    // show and hide method has display issue when options length is long.
+    var options = $("#id_holiday").children('option');
     $("#id_country").change(function() {
-        $("#id_holiday").children('option').hide();
-        $("#id_holiday").children("." + $(this).val()).show();
+        $("#id_holiday").empty();
+        var className = $(this).val().replace(/\s+/g, '_');
+        for (option of options) {
+            if (option.getAttribute('class') == className) {
+                $("#id_holiday").append(option);
+            }
+        }
+        $("#id_holiday").children('option').show();
     });
 })
