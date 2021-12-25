@@ -42,13 +42,13 @@ $(document).ready(function() {
         addWeightedAttendant(event);
     });
 
-    var acceptable_offline_meeting_cities = new Tagify(
-        document.querySelector("input[id='id_acceptable_offline_meeting_cities']"),
-        {
-            userInput: false
-        });
     $.getJSON('/static/reunion/world-city.json', function(data) {
-        acceptable_offline_meeting_cities.whitelist = data;
+        var acceptable_offline_meeting_cities = new Tagify(
+            document.querySelector("input[id='id_acceptable_offline_meeting_cities']"),
+            {
+                whitelist: data,
+                enforceWhitelist: true,
+            });
     });
 
     // show and hide method has display issue when options length is too large.
