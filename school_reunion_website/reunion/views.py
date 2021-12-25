@@ -4,7 +4,6 @@ from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from .utils import valid_request_from_forms, record_new_meeting_preference, VERIFIED_EMAIL_STATUS
 from .emails import verify_registered_email_address
-
 from .models import Meeting, MeetingPreference
 from .forms import MeetingPreferenceForm, EntryForm, MeetingGenerationForm
 import threading
@@ -26,13 +25,12 @@ def index(request):
 def meeting_preference(request):
     if request.method == 'POST':
         valid_form = valid_request_from_forms(request.POST, [MeetingPreferenceForm, EntryForm], get_model=True)
-        # todo: currently, must all fields of MeetingPreferenceForm are filled, then it will be valid
-        print('MeetingPreferenceForm== debug== '+str(MeetingPreferenceForm(request.POST).is_valid()))
 
         meeting_code = request.POST.get('meeting_code', request.session.get('meeting_code'))
         meeting = get_object_or_404(Meeting, pk=meeting_code)
         registered_attendant_code = request.POST.get('registered_attendant_code',
                                                      request.session.get('registered_attendant_code'))
+        request.session['registered_attendant_code'] = None
         if not registered_attendant_code and meeting.code_available_usage <= 0:
             raise Http404('This meeting has no available slot!')
 
@@ -40,21 +38,23 @@ def meeting_preference(request):
             preference: MeetingPreference = valid_form.model
             if not registered_attendant_code:
                 lock.acquire()
-                # Need to fetch again to refresh the available slot.
-                meeting = get_object_or_404(Meeting, pk=meeting_code)
-                if meeting.code_available_usage <= 0:
-                    raise Http404('This meeting has no available slot!')
-                registered_attendant_code = uuid.uuid4()
-                while MeetingPreference.objects.filter(registered_attendant_code=registered_attendant_code).exists():
+                try:
+                    # Need to fetch again to refresh the available slot.
+                    meeting = get_object_or_404(Meeting, pk=meeting_code)
+                    if meeting.code_available_usage <= 0:
+                        raise Http404('This meeting has no available slot!')
                     registered_attendant_code = uuid.uuid4()
-                meeting.code_available_usage -= 1
-                preference.registered_attendant_code = str(registered_attendant_code)
-                preference.meeting_id = meeting_code
-                preference.email_verification_code = (
-                    f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
-                # todo, record attendant's information after encryption
-                record_new_meeting_preference(meeting, preference)
-                lock.release()
+                    while MeetingPreference.objects.filter(registered_attendant_code=registered_attendant_code).exists():
+                        registered_attendant_code = uuid.uuid4()
+                    meeting.code_available_usage -= 1
+                    preference.registered_attendant_code = str(registered_attendant_code)
+                    preference.meeting_id = meeting_code
+                    preference.email_verification_code = (
+                        f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
+                    # todo, record attendant's information after encryption
+                    record_new_meeting_preference(meeting, preference)
+                finally:
+                    lock.release()
 
                 verify_registered_email_address(preference, meeting.display_name)
                 request.session['pop_message'] = (f'Thank you for registration!'
@@ -66,6 +66,7 @@ def meeting_preference(request):
             else:
                 preference.registered_attendant_code = registered_attendant_code
                 preference.meeting_id = meeting_code
+                # todo, if email address is change, need to do the verification again
                 preference.save()
                 request.session['pop_message'] = f'Your change is saved!'
                 return redirect('reunion:index')
@@ -105,6 +106,7 @@ def email_verification(request, verification_code):
     if request.method == 'GET':
         preference = get_object_or_404(MeetingPreference, email_verification_code=verification_code)
         meeting = get_object_or_404(Meeting, pk=preference.meeting_id)
+        # todo, add verification expiration
         preference.email_verification_code = VERIFIED_EMAIL_STATUS
         preference.save()
         return render(request, 'reunion/email_verification.html', {'meeting_name': meeting.display_name})

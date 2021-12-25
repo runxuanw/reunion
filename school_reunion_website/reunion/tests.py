@@ -7,7 +7,6 @@ import uuid
 from django.core import mail
 from .emails import SCHOOL_REUNION_ADMIN_EMAIL
 from .utils import VERIFIED_EMAIL_STATUS
-from django.utils import dateparse
 
 
 TESTING_EMAIL_ADDRESS = 'school.reunion.testing@gmail.com'
@@ -23,7 +22,8 @@ def _create_new_preference_form(client, meeting_code):
             'name': 'fake_name',
             'email': TESTING_EMAIL_ADDRESS,
             'prefer_to_attend_every_n_months': '12',
-            'selected_attending_dates': 'dummy_attending_dates',
+            'selected_attending_dates':
+                '[{"value":"12/16/2021 - 12/25/2021:no_repeat"},{"value":"United_States:Washington\'s Birthday 2021-02-15"}]',
             'earliest_meeting_time': '00:12',
             'latest_meeting_time': '00:12',
             'online_attending_time_zone': '12',
@@ -55,6 +55,8 @@ class MeetingPreferenceViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Meeting.objects.get(meeting_code=self.meeting_code).code_available_usage, 1)
         self.assertEqual(preference.name, 'fake_name')
+        self.assertEqual(preference.selected_attending_dates,
+                         "['12/16/2021 - 12/25/2021:no_repeat', \"United_States:Washington's Birthday 2021-02-15\"]")
         self.assertEqual(len(preference.email_verification_code), 128)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].from_email, SCHOOL_REUNION_ADMIN_EMAIL)

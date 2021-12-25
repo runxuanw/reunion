@@ -6,7 +6,8 @@ $(document).ready(function() {
             userInput: false
         });
     $("#id_holiday").change(function() {
-        attending_dates.addTags([$(this).val()]);
+        attending_dates.addTags(
+            [`${$("#id_holiday option:selected").attr('class')}:${$("#id_holiday option:selected").text()}`]);
     });
     $('input[id="id_custom_dates"]').daterangepicker({autoApply: true});
     $('input[id="id_custom_dates"]').on('apply.daterangepicker', function(ev, picker) {
@@ -14,7 +15,7 @@ $(document).ready(function() {
         if (repeat_option === undefined) {
             repeat_option = 'no_repeat';
         }
-        attending_dates.addTags([`${$(this).val()} ${repeat_option}`]);
+        attending_dates.addTags([`${$(this).val()}:${repeat_option}`]);
     });
 
     var weighted_attendants = new Tagify(
@@ -44,24 +45,16 @@ $(document).ready(function() {
     var acceptable_offline_meeting_cities = new Tagify(
         document.querySelector("input[id='id_acceptable_offline_meeting_cities']"),
         {
-            dropdown: {
-                position: "input",
-                maxItems: 10,
-                enabled: 0
-            },
-            enforceWhitelist: true
+            userInput: false
         });
     $.getJSON('/static/reunion/world-city.json', function(data) {
         acceptable_offline_meeting_cities.whitelist = data;
     });
 
-//    $("#id_country").change(function() {
-//        $("#id_holiday").children('option').hide();
-//        $("#id_holiday").children("." + $(this).val().replace(/\s+/g, '_')).show();
-//    });
-
-    // show and hide method has display issue when options length is long.
+    // show and hide method has display issue when options length is too large.
     var options = $("#id_holiday").children('option');
+    $("#id_country").val('');
+    $("#id_holiday").val('');
     $("#id_country").change(function() {
         $("#id_holiday").empty();
         var className = $(this).val().replace(/\s+/g, '_');
@@ -70,6 +63,7 @@ $(document).ready(function() {
                 $("#id_holiday").append(option);
             }
         }
+        $("#id_holiday").val('');
         $("#id_holiday").children('option').show();
     });
 })

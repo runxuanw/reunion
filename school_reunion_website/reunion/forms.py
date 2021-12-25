@@ -3,9 +3,24 @@ from .models import MeetingPreference, Meeting
 from crispy_forms.helper import FormHelper
 from crispy_forms.bootstrap import InlineRadios, FormActions, InlineCheckboxes
 from bootstrap_datepicker_plus.widgets import TimePickerInput
-from crispy_forms.layout import Layout, Submit, Row, Column, Field, Button
-from .utils import get_country_to_holidays_map
+from crispy_forms.layout import Layout, Submit, Row, Column, Button
+from .utils import get_country_to_holidays_map, REPEAT_OPTIONS
 from taggit.forms import TagField, TagWidget
+import ast
+
+
+class TagifyField(TagField):
+    def clean(self, value):
+        value = forms.CharField.clean(self, value)
+        if not value:
+            return ''
+        try:
+            eval_list = ast.literal_eval(value)
+            if not isinstance(eval_list, list):
+                return ''
+            return ','.join([item['value'] for item in eval_list if isinstance(item, dict)])
+        except ValueError:
+            raise forms.ValidationError("Please provide a comma-separated list of tags.")
 
 
 class SelectWithAttribute(forms.widgets.Select):
@@ -88,22 +103,19 @@ class MeetingPreferenceForm(forms.ModelForm):
                          'style': 'display: none'}))
         for idx, (date, holiday_name) in enumerate(holidays.items()):
             choices.append((f'{country_name}_{idx+1}',
-                            {'label': f'{holiday_name} {date}',
+                            {'label': f'{holiday_name.replace(",", " ")} {date}',
                              'class': class_name,
                              'style': 'display: none'}))
     holiday = forms.ChoiceField(label='Holiday (repeat each year)',
                                 choices=tuple(choices),
                                 widget=SelectWithAttribute,
                                 required=False)
-    custom_dates = forms.DateField(widget=forms.DateInput, required=False)
+    custom_dates = forms.CharField(widget=forms.DateInput, required=False)
     repeat_option_for_adding_custom_dates = forms.ChoiceField(
-        choices=[('repeat_each_year', 'repeat each year'),
-                 ('repeat_each_month', 'repeat each month'),
-                 ('repeat_each_week', 'repeat each week'),
-                 ('no_repeat', 'no repeat')],
+        choices=REPEAT_OPTIONS,
         widget=forms.RadioSelect,
         required=False)
-    selected_attending_dates = TagField(widget=TagWidget)
+    selected_attending_dates = TagifyField(widget=TagWidget)
 
     earliest_meeting_time = forms.TimeField(widget=TimePickerInput())
     latest_meeting_time = forms.TimeField(widget=TimePickerInput())
@@ -116,11 +128,11 @@ class MeetingPreferenceForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         required=False)
 
-    acceptable_offline_meeting_cities = TagField(widget=TagWidget)
+    acceptable_offline_meeting_cities = TagifyField(widget=TagWidget)
 
     other_attendant = forms.CharField(label='Other Attendant (press enter to add)', required=False)
     other_attendant_weight = forms.FloatField(label='Attendant Value (default 1; press enter to add)', required=False)
-    weighted_attendants = TagField(widget=TagWidget, label='Special valued attendants', required=False)
+    weighted_attendants = TagifyField(widget=TagWidget, label='Special valued attendants', required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

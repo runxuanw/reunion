@@ -9,6 +9,11 @@ import datetime
 
 
 VERIFIED_EMAIL_STATUS = 'Verified'
+COUNTRY_TO_HOLIDAY_MAP = {}
+REPEAT_OPTIONS = [('repeat_each_year', 'repeat each year'),
+                  ('repeat_each_month', 'repeat each month'),
+                  ('repeat_each_week', 'repeat each week'),
+                  ('no_repeat', 'no repeat')]
 
 
 @dataclasses.dataclass
@@ -47,22 +52,22 @@ def record_new_meeting_preference(meeting, preference):
 
 def get_country_to_holidays_map():
     """Returns {country name: list of holidays}."""
-    country_code_map = {}
-    for country in pycountry.countries:
-        country_code_map[country.alpha_2] = country.name
-        country_code_map[country.alpha_3] = country.name
+    global COUNTRY_TO_HOLIDAY_MAP
+    if not COUNTRY_TO_HOLIDAY_MAP:
+        country_code_map = {}
+        for country in pycountry.countries:
+            country_code_map[country.alpha_2] = country.name
+            country_code_map[country.alpha_3] = country.name
 
-    country_to_holidays_map = {}
-    holiday_countries = holidays.list_supported_countries()
-    for country in holiday_countries:
-        country_holidays = holidays.CountryHoliday(
-            country=country, years=datetime.datetime.utcnow().year)
-        country_name = country
-        if country.isupper():
-            country_name = country_code_map.get(country)
-        if country_name and (country_name[1:].islower() or (' ' in country_name)):
-            country_to_holidays_map[country_name] = country_holidays
-    return country_to_holidays_map
-
-
-get_country_to_holidays_map()
+        country_to_holidays_map = {}
+        holiday_countries = holidays.list_supported_countries()
+        for country in holiday_countries:
+            country_holidays = holidays.CountryHoliday(
+                country=country, years=datetime.datetime.utcnow().year)
+            country_name = country
+            if country.isupper():
+                country_name = country_code_map.get(country)
+            if country_name and (country_name[1:].islower() or (' ' in country_name)):
+                country_to_holidays_map[country_name] = country_holidays
+        COUNTRY_TO_HOLIDAY_MAP = country_to_holidays_map
+    return COUNTRY_TO_HOLIDAY_MAP

@@ -18,7 +18,7 @@ class MeetingPreference(models.Model):
 
     name = models.CharField(max_length=30)
     email = models.EmailField()
-    email_verification_code = models.TextField(db_index=True, unique=True)
+    email_verification_code = models.TextField(db_index=True, unique=False)
     # Time and location:
     prefer_to_attend_every_n_months = models.IntegerField()
     selected_attending_dates = models.TextField(blank=True)
