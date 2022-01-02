@@ -66,8 +66,14 @@ def meeting_preference(request):
             else:
                 preference.registered_attendant_code = registered_attendant_code
                 preference.meeting_id = meeting_code
-                # todo, if email address is change, need to do the verification again
-                preference.save()
+                existing_preference = get_object_or_404(MeetingPreference, pk=registered_attendant_code)
+                if existing_preference.email != preference.email:
+                    preference.email_verification_code = (
+                        f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
+                    preference.save()
+                    verify_registered_email_address(preference, meeting.display_name)
+                else:
+                    preference.save()
                 request.session['pop_message'] = f'Your change is saved!'
                 return redirect('reunion:index')
 

@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import models
 
 
@@ -7,9 +9,24 @@ class Meeting(models.Model):
     code_max_usage = models.IntegerField()
     code_available_usage = models.IntegerField(default=-1)
     contact_email = models.EmailField()
+    last_check_time = models.DateTimeField(default=datetime.datetime(year=1970, month=1, day=1))
 
     def __str__(self):
         return f'meeting {self.meeting_code}'
+
+
+class MeetingRecord(models.Model):
+    meeting_record = models.UUIDField(primary_key=True)
+    meeting = models.ForeignKey(Meeting, on_delete=models.PROTECT)
+
+    meeting_method = models.TextField()
+    offline_meeting_locations = models.TextField()
+    online_meeting_link = models.TextField()
+    meeting_start_time = models.DateTimeField()
+    meeting_end_time = models.DateTimeField()
+    confirmed_attendant_codes = models.TextField()
+    pending_attendant_codes = models.TextField()
+    denied_attendant_codes = models.TextField()
 
 
 class MeetingPreference(models.Model):
@@ -30,7 +47,6 @@ class MeetingPreference(models.Model):
     preferred_meeting_duration = models.TimeField(blank=True)
 
     acceptable_meeting_methods = models.CharField(max_length=30, blank=True)
-    preferred_meeting_activities = models.CharField(max_length=300, blank=True)
 
     # Other attendants:
     # If one joins the meeting, the finalized meeting value will be positive for that person.

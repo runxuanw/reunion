@@ -172,7 +172,6 @@ class MeetingPreferenceForm(forms.ModelForm):
 
             InlineCheckboxes('acceptable_meeting_methods'),
             'acceptable_offline_meeting_cities',
-            'preferred_meeting_activities',
 
             Row(
                 Column('other_attendant', css_class='form-group col-md-6 mb-0'),
