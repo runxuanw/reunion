@@ -101,9 +101,9 @@ class MeetingPreferenceForm(forms.ModelForm):
                         {'label': f'Select All {country_name} Holidays',
                          'class': class_name,
                          'style': 'display: none'}))
-        for idx, (date, holiday_name) in enumerate(holidays.items()):
+        for idx, (holiday_name, _) in enumerate(holidays.items()):
             choices.append((f'{country_name}_{idx+1}',
-                            {'label': f'{holiday_name.replace(",", " ")} {date}',
+                            {'label': f'{holiday_name}',
                              'class': class_name,
                              'style': 'display: none'}))
     holiday = forms.ChoiceField(label='Holiday (repeat each year)',

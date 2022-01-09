@@ -1,19 +1,28 @@
+import collections
+
 from django.db import transaction
 from django.http import Http404
 import dataclasses
 from django.db import models
-from typing import Optional
+from typing import Optional, Dict
 import holidays
 import pycountry
 import datetime
 
 
+DEFAULT_HOLIDAY_YEARS = (datetime.datetime.utcnow().year, datetime.datetime.utcnow().year+1)
+NEAR_WEEKEND_DAYS = {0, 4, 5, 6}
 VERIFIED_EMAIL_STATUS = 'Verified'
-COUNTRY_TO_HOLIDAY_MAP = {}
-REPEAT_OPTIONS = [('repeat_each_year', 'repeat each year'),
-                  ('repeat_each_month', 'repeat each month'),
-                  ('repeat_each_week', 'repeat each week'),
-                  ('no_repeat', 'no repeat')]
+COUNTRY_TO_HOLIDAY_MAP_BY_YEAR = {}
+REPEAT_EACH_YEAR = 'repeat_each_year'
+REPEAT_EACH_MONTH = 'repeat_each_month'
+REPEAT_EACH_WEEK = 'repeat_each_week'
+NO_REPEAT = 'no_repeat'
+REPEAT_OPTIONS = [(REPEAT_EACH_YEAR, 'repeat each year'),
+                  (REPEAT_EACH_MONTH, 'repeat each month'),
+                  (REPEAT_EACH_WEEK, 'repeat each week'),
+                  (NO_REPEAT, 'no repeat')]
+REPEAT_OPTIONS_SET = set([option[0] for option in REPEAT_OPTIONS])
 
 
 @dataclasses.dataclass
@@ -50,24 +59,32 @@ def record_new_meeting_preference(meeting, preference):
     preference.save()
 
 
-def get_country_to_holidays_map():
-    """Returns {country name: list of holidays}."""
-    global COUNTRY_TO_HOLIDAY_MAP
-    if not COUNTRY_TO_HOLIDAY_MAP:
+def get_country_to_holidays_map(years=DEFAULT_HOLIDAY_YEARS):
+    """Returns {country name: {holiday name: [holiday dates]}}."""
+    global COUNTRY_TO_HOLIDAY_MAP_BY_YEAR
+    if not COUNTRY_TO_HOLIDAY_MAP_BY_YEAR.get(years):
         country_code_map = {}
         for country in pycountry.countries:
             country_code_map[country.alpha_2] = country.name
             country_code_map[country.alpha_3] = country.name
 
         country_to_holidays_map = {}
-        holiday_countries = holidays.list_supported_countries()
-        for country in holiday_countries:
+        countries = holidays.list_supported_countries()
+        for country in countries:
             country_holidays = holidays.CountryHoliday(
-                country=country, years=datetime.datetime.utcnow().year)
+                country=country, years=years)
+
+            reformatted_holidays = collections.defaultdict(list)
+            for date, holiday_name in country_holidays.items():
+                reformatted_holidays[holiday_name.replace(",", " ")].append(date)
             country_name = country
             if country.isupper():
                 country_name = country_code_map.get(country)
+            # Only add human readable country name.
             if country_name and (country_name[1:].islower() or (' ' in country_name)):
-                country_to_holidays_map[country_name] = country_holidays
-        COUNTRY_TO_HOLIDAY_MAP = country_to_holidays_map
-    return COUNTRY_TO_HOLIDAY_MAP
+                country_to_holidays_map[country_name] = reformatted_holidays
+        COUNTRY_TO_HOLIDAY_MAP_BY_YEAR[years] = country_to_holidays_map
+    return COUNTRY_TO_HOLIDAY_MAP_BY_YEAR[years]
+
+
+get_country_to_holidays_map()
