@@ -1,6 +1,9 @@
 import datetime
-
+from pytz import UTC
 from django.db import models
+
+
+DEFAULT_INITIAL_DATE = datetime.datetime(year=1970, month=1, day=1, tzinfo=UTC)
 
 
 class Meeting(models.Model):
@@ -9,7 +12,7 @@ class Meeting(models.Model):
     code_max_usage = models.IntegerField()
     code_available_usage = models.IntegerField(default=-1)
     contact_email = models.EmailField()
-    last_check_time = models.DateTimeField(default=datetime.datetime(year=1970, month=1, day=1))
+    last_check_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
 
     def __str__(self):
         return f'meeting {self.meeting_code}'
@@ -63,3 +66,9 @@ class MeetingPreference(models.Model):
 
     class Meta:
         unique_together = (("meeting", "name"), ("meeting", "email"),)
+
+
+class MeetingAttendance(models.Model):
+    registered_attendant_code = models.ForeignKey(MeetingPreference, on_delete=models.PROTECT)
+    last_invitation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
+    last_confirmation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)

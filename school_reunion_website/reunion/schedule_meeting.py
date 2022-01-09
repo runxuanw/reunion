@@ -1,10 +1,12 @@
 import datetime
 
-from .models import MeetingPreference, Meeting, MeetingRecord
+from .models import MeetingPreference, Meeting, MeetingRecord, MeetingAttendance
 from .utils import get_country_to_holidays_map, REPEAT_OPTIONS_SET, NO_REPEAT, REPEAT_EACH_YEAR, REPEAT_EACH_WEEK, REPEAT_EACH_MONTH
 import collections
 
 ALL_DATES = 'all_dates'
+# Consider to invite the candidate at least after 7 months if they prefer to attend every 10 months.
+MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL = 0.7
 
 # 1. {date: available people count with relax of 1 week} for 1 year from current time. (done)
 # 2. iteratively generate meeting from most count date to least count date
@@ -136,16 +138,33 @@ def get_available_dates(preference: MeetingPreference, start: datetime.date, unt
 def schedule_meeting(meeting: Meeting):
     meeting_records = MeetingRecord.objects.get(meeting=meeting.meeting_code)
     meeting_preferences = MeetingPreference.objects.get(meeting=meeting.meeting_code)
-
     date_to_potential_participants = collections.defaultdict(list)
     for meeting_preference in meeting_preferences:
+        attendance = (
+                MeetingAttendance.objects.get(registered_attendant_code=meeting_preference.registered_attendant_code)
+                or MeetingAttendance(registered_attendant_code=meeting_preference.registered_attendant_code))
         available_dates = get_available_dates(
             meeting_preference,
             start=datetime.datetime.utcnow().date(),
             until=(datetime.datetime.utcnow()+datetime.timedelta(days=365)).date())
+        minimal_attending_interval = datetime.timedelta(
+            days=meeting_preference.prefer_to_attend_every_n_months*30*MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL)
+        earliest_acceptable_date = (attendance.last_confirmation_time + minimal_attending_interval).date()
         for available_date in available_dates:
-            date_to_potential_participants[available_date].append(meeting_preference)
+            if earliest_acceptable_date <= available_date:
+                date_to_potential_participants[available_date].append(meeting_preference)
 
-    # (unfinished) Filter by existing meeting records.
+    # Now consider other rules, e.g. everyone will get positive value from the meeting and
+    # the meeting meets the minimal size for participants.
 
-    # (unfinished) Modify participants by other rules, e.g. frequency and conflicts.
+    # Here is the algorithm to schedule meetings:
+    # We would like to optimize the total value of meetings for the considered period.
+    # Each meeting's value is calculated as the square of number of willing participants,
+    # e.g. 10 people's meeting has value of 100, which is better than 2 meetings with 7 people each (2 * 7^2 = 98).
+    # This is approximated by each participant will add 1 value to each of other participants in the meeting.
+    # Also, if one person attended multiple meetings WITHIN their preferred interval, seeing the same people again
+    # will not add value to them, meeting new people who they haven't seen within the preferred period will add value.
+    # The weighted attendance in meeting preference only matters when filtering people because of conflict.
+    # This issue becomes an interval scheduling problem with dynamical weight of each interval.
+
+    # Need to think about what to do if some people update their preference.
