@@ -159,12 +159,13 @@ def schedule_meeting(meeting: Meeting):
 
     # Here is the algorithm to schedule meetings:
     # We would like to optimize the total value of meetings for the considered period.
-    # Each meeting's value is calculated as the square of number of willing participants,
-    # e.g. 10 people's meeting has value of 100, which is better than 2 meetings with 7 people each (2 * 7^2 = 98).
-    # This is approximated by each participant will add 1 value to each of other participants in the meeting.
+    # Each meeting's value is calculated as the N*(N-1), N is the number of meeting participants,
+    # e.g. 10 people's meeting has value of 90, which is better than 2 meetings with 7 people each (2 * (6*7) = 84).
+    # This is approximated by each participant will add 1 value to other participants in the meeting.
     # Also, if one person attended multiple meetings WITHIN their preferred interval, seeing the same people again
     # will not add value to them, meeting new people who they haven't seen within the preferred period will add value.
     # The weighted attendance in meeting preference only matters when filtering people because of conflict.
+    # Maybe consider using it to improve the scheduling in future.
     # This issue becomes an interval scheduling problem with dynamical weight of each interval.
 
     # Need to think about what to do if some people update their preference.
