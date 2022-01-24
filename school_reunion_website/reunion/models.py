@@ -36,7 +36,7 @@ class MeetingPreference(models.Model):
     registered_attendant_code = models.UUIDField(primary_key=True)
     meeting = models.ForeignKey(Meeting, on_delete=models.PROTECT)
 
-    name = models.CharField(max_length=30)
+    name = models.CharField(max_length=100)
     email = models.EmailField()
     email_verification_code = models.TextField(db_index=True, unique=False)
     # Time and location:
@@ -62,7 +62,7 @@ class MeetingPreference(models.Model):
     minimal_meeting_size = models.IntegerField(default=2)
 
     def __str__(self):
-        return f'meeting preference for {self.meeting}'
+        return f'attendant code {self.registered_attendant_code}, meeting preference for {self.meeting}'
 
     class Meta:
         unique_together = (("meeting", "name"), ("meeting", "email"),)

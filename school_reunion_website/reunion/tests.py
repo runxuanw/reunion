@@ -9,7 +9,7 @@ import uuid
 from django.core import mail
 from .emails import SCHOOL_REUNION_ADMIN_EMAIL
 from .utils import VERIFIED_EMAIL_STATUS
-from .schedule_meeting import get_available_dates
+from .schedule_meeting import get_available_dates, get_feasible_meeting_dates_with_participants, MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL
 from typing import Optional, Dict
 
 
@@ -22,7 +22,7 @@ def _create_preference_form(client, meeting_code, email=TESTING_EMAIL_ADDRESS,
     session['meeting_code'] = meeting_code
     session.save()
     post_data = {
-        'name': 'fake_name',
+        'name': f'name_{str(uuid.uuid4())}',
         'email': email,
         'prefer_to_attend_every_n_months': '12',
         'selected_attending_dates':
@@ -59,7 +59,7 @@ class MeetingPreferenceViewTests(TestCase):
         meeting_preference() with proper post request will have preference recorded.
         """
         self.assertEqual(Meeting.objects.get(meeting_code=self.meeting_code).display_name, 'test meeting')
-        response = _create_preference_form(self.client, self.meeting_code)
+        response = _create_preference_form(self.client, self.meeting_code, override_post_data={'name': 'fake_name'})
 
         preference = MeetingPreference.objects.get(meeting_id=self.meeting_code)
         self.assertEqual(response.status_code, 302)
@@ -142,5 +142,105 @@ class MeetingPreferenceViewTests(TestCase):
                                datetime.date(2000, 5, 10), datetime.date(2000, 5, 11), datetime.date(2000, 5, 12),
                                datetime.date(2000, 5, 13), datetime.date(2000, 5, 14), datetime.date(2000, 5, 15)])
 
-    def test_scheduling_meeting_after_conditions_are_met(self):
+    def test_no_feasible_meeting_dates_because_minimal_meeting_size_set_too_high(self):
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_month"}]',
+                                'minimal_meeting_size': '4',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy@gmail.com'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_year"}]',
+                                'minimal_meeting_size': '2',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy2@gmail.com'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_year"}]',
+                                'minimal_meeting_size': '3',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy3@gmail.com'})
+
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        dates_with_participants = get_feasible_meeting_dates_with_participants(
+            meeting, start=datetime.date(2021, 12, 1), until=datetime.date(2022, 1, 1))
+
+        self.assertEqual(dates_with_participants, [])
+
+    def test_has_feasible_meeting_date_because_minimal_meeting_size_set_is_right(self):
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        meeting.code_available_usage = 10
+        meeting.code_max_usage = 10
+        meeting.save()
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_month"}]',
+                                'minimal_meeting_size': '3',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy@gmail.com'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_year"}]',
+                                'minimal_meeting_size': '2',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy2@gmail.com'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_year"}]',
+                                'minimal_meeting_size': '3',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy3@gmail.com'})
+
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        dates_with_participants = get_feasible_meeting_dates_with_participants(
+            meeting, start=datetime.date(2021, 12, 1), until=datetime.date(2022, 1, 1))
+
+        self.assertEqual(len(dates_with_participants), 1)
+        self.assertLess(dates_with_participants[0][0], datetime.date(2021, 12, 26))
+        self.assertLess(datetime.date(2021, 12, 9), dates_with_participants[0][0])
+        self.assertEqual(len(dates_with_participants[0][1]), 3)
+        self.assertCountEqual(dates_with_participants[0][1],
+                              MeetingPreference.objects.filter(meeting=self.meeting_code))
+
+    def test_get_feasible_meeting_dates_with_meeting_frequency_considered(self):
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        meeting.code_available_usage = 10
+        meeting.code_max_usage = 10
+        meeting.save()
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_month"}]',
+                                'minimal_meeting_size': '3',
+                                'prefer_to_attend_every_n_months': '6',
+                                'email': 'dummy@gmail.com'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_month"}]',
+                                'minimal_meeting_size': '2',
+                                'prefer_to_attend_every_n_months': '6',
+                                'email': 'dummy2@gmail.com'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': '[{"value":"12/10/2021 - 12/25/2021:repeat_each_month"}]',
+                                'minimal_meeting_size': '3',
+                                'prefer_to_attend_every_n_months': '6',
+                                'email': 'dummy3@gmail.com'})
+
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+
+        # Non-deterministic behavior, run the test multiple times.
+        for i in range(10):
+            dates_with_participants = get_feasible_meeting_dates_with_participants(
+                meeting, start=datetime.date(2021, 1, 1), until=datetime.date(2022, 1, 1))
+
+            self.assertLess(len(dates_with_participants), 4)
+            self.assertLess(1, len(dates_with_participants))
+            for idx, (date, participants) in enumerate(dates_with_participants):
+                self.assertEqual(len(participants), 3)
+                self.assertLess(
+                    datetime.timedelta(days=int(6*30*MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL)-1),
+                    abs(date - dates_with_participants[idx-1][0]))
+
+    def test_get_feasible_meeting_dates_with_meeting_record_considered(self):
         pass

@@ -4,7 +4,7 @@ from django.db import transaction
 from django.http import Http404
 import dataclasses
 from django.db import models
-from typing import Optional, Dict
+from typing import Optional
 import holidays
 import pycountry
 import datetime
@@ -54,9 +54,10 @@ def valid_request_from_forms(post_request, candidate_forms, raise_if_not_found=T
 
 
 @transaction.atomic
-def record_new_meeting_preference(meeting, preference):
+def record_new_meeting_preference(meeting, preference, meeting_attendance):
     meeting.save()
     preference.save()
+    meeting_attendance.save()
 
 
 def get_country_to_holidays_map(years=DEFAULT_HOLIDAY_YEARS):

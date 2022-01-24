@@ -4,7 +4,7 @@ from django.http import Http404
 from django.shortcuts import render, get_object_or_404, redirect
 from .utils import valid_request_from_forms, record_new_meeting_preference, VERIFIED_EMAIL_STATUS
 from .emails import verify_registered_email_address
-from .models import Meeting, MeetingPreference
+from .models import Meeting, MeetingPreference, MeetingAttendance
 from .forms import MeetingPreferenceForm, EntryForm, MeetingGenerationForm
 import threading
 
@@ -52,7 +52,8 @@ def meeting_preference(request):
                     preference.email_verification_code = (
                         f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
                     # todo, record attendant's information after encryption
-                    record_new_meeting_preference(meeting, preference)
+                    record_new_meeting_preference(
+                        meeting, preference, MeetingAttendance(registered_attendant_code=preference))
                 finally:
                     lock.release()
 
