@@ -1,6 +1,7 @@
 import datetime
 from pytz import UTC
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 DEFAULT_INITIAL_DATE = datetime.datetime(year=1970, month=1, day=1, tzinfo=UTC)
@@ -9,7 +10,8 @@ DEFAULT_INITIAL_DATE = datetime.datetime(year=1970, month=1, day=1, tzinfo=UTC)
 class Meeting(models.Model):
     meeting_code = models.UUIDField(primary_key=True)
     display_name = models.CharField(max_length=100)
-    code_max_usage = models.IntegerField()
+    code_max_usage = models.IntegerField(validators=[MaxValueValidator(50),
+                                                     MinValueValidator(2)])
     code_available_usage = models.IntegerField(default=-1)
     contact_email = models.EmailField()
     last_check_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)

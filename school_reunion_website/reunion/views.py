@@ -73,6 +73,8 @@ def meeting_preference(request):
                         f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
                     preference.save()
                     verify_registered_email_address(preference, meeting.display_name)
+                # TODO: Need to update other preference weighted attendants reference
+                #  when the name of this preference is changed.
                 else:
                     preference.save()
                 request.session['pop_message'] = f'Your change is saved!'

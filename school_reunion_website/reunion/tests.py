@@ -35,7 +35,7 @@ def _create_preference_form(client, meeting_code, email=TESTING_EMAIL_ADDRESS,
         'acceptable_offline_meeting_cities': '12',
         'preferred_meeting_duration': '00:12',
         'acceptable_meeting_methods': ['online', 'offline'],
-        'weighted_attendants': '12',
+        'weighted_attendants': '[{"value":"assa:-1"},{"value":"lala:-10"},{"value":"haha:20"}]',
         'minimal_meeting_value': '1',
         'minimal_meeting_size': '2'}
     if override_post_data:
