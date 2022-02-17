@@ -298,11 +298,7 @@ class MeetingPreferenceViewTests(TestCase):
 
         self.assertEqual(len(dates_with_participants), 1)
         self.assertEqual(len(dates_with_participants[0][1]), 3)
-        for p in dates_with_participants[0][1]:
-            if p.name == 'C':
-                raise Exception('C should not be included in the meeting because recent attendance.')
-            elif p.name not in {'A', 'B', 'D'}:
-                raise Exception(f'Unexpected name {p.name}!!!')
+        self.assertCountEqual(['A', 'B', 'D'], [p.name for p in dates_with_participants[0][1]])
 
     def test_get_feasible_meeting_multiple_dates_with_meeting_value_considered(self):
         # TODO, mock schedule_meeting.get_utc_now before 2025.1.1
