@@ -59,7 +59,7 @@ class MeetingPreference(models.Model):
     # Default value is 1 for everyone.
     weighted_attendants = models.TextField(blank=True)
     # Minimal meeting value for one to be considered joining.
-    minimal_meeting_value = models.IntegerField(default=1)
+    minimal_meeting_value = models.IntegerField(default=2)
     # In case minimal_meeting_value doesn't cover edge cases.
     minimal_meeting_size = models.IntegerField(default=2)
 
@@ -71,6 +71,6 @@ class MeetingPreference(models.Model):
 
 
 class MeetingAttendance(models.Model):
-    registered_attendant_code = models.ForeignKey(MeetingPreference, on_delete=models.PROTECT)
+    attendant_preference = models.ForeignKey(MeetingPreference, on_delete=models.PROTECT)
     last_invitation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
     last_confirmation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)

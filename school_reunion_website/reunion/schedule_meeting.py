@@ -239,17 +239,19 @@ def _get_unavailable_date_range(
 def _get_meeting_value_data_for_preference(
         participant, all_participants_preference) -> Tuple[bool, List[MeetingPreference]]:
     """Return (would this participant prefer to be removed, [ways to choose in order for participant to attend])"""
-    # Exclude oneself.
-    total_meeting_value = -1
+    total_meeting_value = 0
     negative_meeting_value = 0
     negative_value_entries = []
     must_be_removed = False
     constrained_participants_pool = []
+    all_participants_preference_name_map = {preference.name: preference for preference in all_participants_preference}
+
     for other_participant in all_participants_preference:
         value = participant.weighted_attendants.get(other_participant.name, 1)
         total_meeting_value += value
-        if value < 0:
-            negative_value_entries.append([value, other_participant.name])
+        # Include oneself as 1.
+        if value < 1 and other_participant.name in all_participants_preference_name_map:
+            negative_value_entries.append([value, all_participants_preference_name_map.get(other_participant.name)])
             negative_meeting_value += value
     if total_meeting_value >= participant.minimal_meeting_value:
         return must_be_removed, constrained_participants_pool
@@ -271,7 +273,6 @@ def _get_meeting_value_data_for_preference(
     return must_be_removed, constrained_participants_pool
 
 
-# TODO/continue: add unit tests!
 def _sanitize_with_minimal_meeting_value_preference(
         potential_participants: List[MeetingPreference],
         history_meeting_attendance: List[MeetingAttendance]):
@@ -322,12 +323,18 @@ def _sanitize_with_minimal_meeting_value_preference_one_time(
                 and participant.registered_attendant_code not in resolved_participant_codes):
             continue
         sanitized_potential_participants.append(participant)
+
     return sanitized_potential_participants
 
 
 # This is an approximation of meeting value. The meeting records should be used for better estimation.
 def _get_participant_meeting_value(attendance: MeetingAttendance, now: datetime.datetime):
-    return (now - attendance.last_confirmation_time).day
+    return (now - attendance.last_confirmation_time).days
+
+
+def get_utc_now():
+    # Must be aware of timezone.
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 def _get_participants_and_resolve_conflict(
@@ -335,41 +342,41 @@ def _get_participants_and_resolve_conflict(
         history_meeting_attendance: List[MeetingAttendance]) -> Set[str]:
     conflict_edges: Dict[str, Set[str]] = collections.defaultdict(set)
     participants_value: Dict[str, int] = collections.defaultdict(int)
-    utc_now = datetime.datetime.utcnow()
+    utc_now = get_utc_now()
     # Shorten UUID to index, {UUID: str(index)}.
-    shorten_codes_dict = {}
+    uuid_to_shorten_codes_dict = {}
 
     # Construct the conflict as edges in both direction.
     for conflict in conflict_constrain:
         conflict_starter_code = conflict[0].registered_attendant_code
-        if conflict_starter_code not in shorten_codes_dict:
-            shorten_codes_dict[str(len(shorten_codes_dict))] = conflict_starter_code
+        if conflict_starter_code not in uuid_to_shorten_codes_dict:
+            uuid_to_shorten_codes_dict[conflict_starter_code] = str(len(uuid_to_shorten_codes_dict))
         for conflict_receiver in conflict[1]:
             conflict_receiver_code = conflict_receiver.registered_attendant_code
-            if conflict_receiver_code not in shorten_codes_dict:
-                shorten_codes_dict[str(len(shorten_codes_dict))] = conflict_receiver_code
-            conflict_edges[shorten_codes_dict[conflict_starter_code]].add(shorten_codes_dict[conflict_receiver_code])
-            conflict_edges[shorten_codes_dict[conflict_receiver_code]].add(shorten_codes_dict[conflict_starter_code])
+            if conflict_receiver_code not in uuid_to_shorten_codes_dict:
+                uuid_to_shorten_codes_dict[conflict_receiver_code] = str(len(uuid_to_shorten_codes_dict))
+            conflict_edges[uuid_to_shorten_codes_dict[conflict_starter_code]].add(uuid_to_shorten_codes_dict[conflict_receiver_code])
+            conflict_edges[uuid_to_shorten_codes_dict[conflict_receiver_code]].add(uuid_to_shorten_codes_dict[conflict_starter_code])
     for attendance in history_meeting_attendance:
-        if attendance.registered_attendant_code not in shorten_codes_dict:
+        if attendance.attendant_preference.registered_attendant_code not in uuid_to_shorten_codes_dict:
             continue
-        participants_value[shorten_codes_dict[attendance.registered_attendant_code]] = (
+        participants_value[uuid_to_shorten_codes_dict[attendance.attendant_preference.registered_attendant_code]] = (
             _get_participant_meeting_value(attendance, utc_now))
 
     # {ordered unchecked participants: (cached optimal value, [actual participants])} e.g. {'5,6,7,9': (321, [5, 7, 9])}
     optimal_meeting_value_with_participants_cache: Dict[str, Tuple[int, List[str]]] = {}
-    reversed_shorten_codes_dict = {val: key for key, val in shorten_codes_dict.items()}
+    shorten_codes_to_uuid_dict = {val: key for key, val in uuid_to_shorten_codes_dict.items()}
 
     # 2^N = sum(C(i, N)) for 0<=i<=N.
     # Memory usage C(max_cache_key_depth, N).
     optimal_value, participants_index = _get_optimal_meeting_value_with_participants(
-        [str(i) for i in range(len(shorten_codes_dict))],
+        [str(i) for i in range(len(uuid_to_shorten_codes_dict))],
         conflict_edges, participants_value,
         optimal_meeting_value_with_participants_cache,
         max_cache_key_depth=7)
 
     # Decode index to UUID.
-    return set([reversed_shorten_codes_dict[index] for index in participants_index])
+    return set([shorten_codes_to_uuid_dict[index] for index in participants_index])
 
 
 def _get_optimal_meeting_value_with_participants(
@@ -451,7 +458,7 @@ def get_feasible_meeting_dates_with_participants(
         meeting_preference.weighted_attendants = (
             get_weighted_attendants_as_dictionary(meeting_preference.weighted_attendants))
         attendance = MeetingAttendance.objects.get(
-            registered_attendant_code=meeting_preference.registered_attendant_code)
+            attendant_preference=meeting_preference.registered_attendant_code)
         history_meetings_attendance.append(attendance)
         available_dates = get_available_dates(meeting_preference, start=start, until=until)
         # Also consider the notification sent but haven't received a reply: last_invitation_time.
@@ -470,7 +477,8 @@ def get_feasible_meeting_dates_with_participants(
         next_meeting_date, participants_preference = (
             _pick_next_date_to_participate(date_to_potential_participants, history_meetings_attendance))
         date_to_potential_participants.pop(next_meeting_date)
-        picked_dates_with_participants_preference.append((next_meeting_date, participants_preference))
+        if participants_preference:
+            picked_dates_with_participants_preference.append((next_meeting_date, participants_preference))
         _update_other_dates_after_picking_meeting_date(
             next_meeting_date, participants_preference, date_to_potential_participants)
         _sanitize_dates_with_meeting_size_preference(date_to_potential_participants)
@@ -479,7 +487,7 @@ def get_feasible_meeting_dates_with_participants(
 
 
 def schedule_meeting(meeting: Meeting):
-    utcnow = datetime.datetime.utcnow()
+    utcnow = datetime.datetime.get_utc_now()
     dates_with_participants_preference = get_feasible_meeting_dates_with_participants(
         meeting,
         start=utcnow.date(),

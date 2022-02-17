@@ -53,7 +53,7 @@ def meeting_preference(request):
                         f'{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}{uuid.uuid4()}'.replace('-', ''))
                     # todo, record attendant's information after encryption
                     record_new_meeting_preference(
-                        meeting, preference, MeetingAttendance(registered_attendant_code=preference))
+                        meeting, preference, MeetingAttendance(attendant_preference=preference))
                 finally:
                     lock.release()
 
