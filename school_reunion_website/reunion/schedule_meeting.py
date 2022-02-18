@@ -1,10 +1,14 @@
 import datetime
+import uuid
 
 from .models import MeetingPreference, Meeting, MeetingRecord, MeetingAttendance
-from .utils import get_country_to_holidays_map, REPEAT_OPTIONS_SET, NO_REPEAT, REPEAT_EACH_YEAR, REPEAT_EACH_WEEK, REPEAT_EACH_MONTH
+from .utils import ATTENDANT_PENDING_STATUS, VERIFIED_EMAIL_STATUS, get_country_to_holidays_map, REPEAT_OPTIONS_SET, NO_REPEAT, REPEAT_EACH_YEAR, REPEAT_EACH_WEEK, REPEAT_EACH_MONTH
 import collections
 from typing import List, Dict, Optional, Tuple, Union, Set
 import random
+from .emails import send_scheduled_meeting_notification
+import json
+
 
 ALL_DATES = 'all_dates'
 # Consider to invite the candidate at least after 7 months if they prefer to attend every 10 months.
@@ -19,7 +23,7 @@ MAX_PARTICIPATE_VALUE = 1460
 #   2.2 when generate a meeting, weight more for unparticipated people in past meetings
 #   2.3 consider time zone
 # 3. send invitation for those who doesn't fit in the strict date rule (2 weeks)
-# 4. send invitation if the meeting is possible, before 1 month, have 2 weeks to confirm
+# 4. send invitation if the meeting is possible, before 2 month, have 2 weeks to confirm
 
 # 5. create email thread for all people in meeting (before two weeks)
 # 6. create online link for meeting
@@ -454,6 +458,8 @@ def get_feasible_meeting_dates_with_participants(
     # Iterate through all preference to filter out recently participated ones.
     history_meetings_attendance = []
     for meeting_preference in meeting_preferences:
+        if meeting_preference.email_verification_code != VERIFIED_EMAIL_STATUS:
+            continue
         # Sanitize the weighted attendants to dictionary.
         meeting_preference.weighted_attendants = (
             get_weighted_attendants_as_dictionary(meeting_preference.weighted_attendants))
@@ -486,15 +492,43 @@ def get_feasible_meeting_dates_with_participants(
     return picked_dates_with_participants_preference
 
 
+# TODO: to be implemented
+def create_online_meeting_link():
+    return ''
+
+
+def arrange_new_meeting(host_meeting: Meeting,
+                        meeting_date: datetime.date,
+                        participants_preference: List[MeetingPreference]):
+    record = MeetingRecord(meeting=host_meeting)
+    # TODO: timezone and start time to be implemented
+    record.meeting_start_time = meeting_date
+    # TODO: timezone and end time to be implemented
+    record.meeting_end_time = meeting_date + datetime.timedelta(days=1)
+    # TODO: offline meeting location to be implemented
+    record.online_meeting_link = create_online_meeting_link()
+    invitation_code_to_attendant_code = (
+        {str(uuid.uuid4()): p.registered_attendant_code for p in participants_preference})
+    record.invitation_link_to_attendant_code = json.dumps(invitation_code_to_attendant_code)
+    record.attendant_code_to_status = json.dumps(
+        {p.registered_attendant_code: ATTENDANT_PENDING_STATUS for p in participants_preference})
+    record.save()
+    # TODO: update last invitation time?
+    for participant_preference in participants_preference:
+        send_scheduled_meeting_notification(record, participant_preference, participants_preference)
+
+
 def schedule_meeting(meeting: Meeting):
     utcnow = datetime.datetime.get_utc_now()
+    schedule_start_date = (utcnow + datetime.timedelta(days=60)).date()
+    schedule_until_date = (utcnow + datetime.timedelta(days=365+60)).date()
+    notification_until_date = (utcnow + datetime.timedelta(days=90)).date()
     dates_with_participants_preference = get_feasible_meeting_dates_with_participants(
         meeting,
-        start=utcnow.date(),
-        until=(utcnow+datetime.timedelta(days=365)).date())
+        start=schedule_start_date,
+        until=schedule_until_date)
     for date, participants_preference in dates_with_participants_preference:
         # Send notification only when at least two months are available and
         # don't send notification if it is more than three months.
-        if (utcnow+datetime.timedelta(days=60)).date() <= date <= (utcnow+datetime.timedelta(days=90)).date():
-            # Create new meeting record with data.
-            pass
+        if schedule_start_date <= date <= notification_until_date:
+            arrange_new_meeting(meeting, date, participants_preference)

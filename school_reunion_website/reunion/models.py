@@ -7,6 +7,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 DEFAULT_INITIAL_DATE = datetime.datetime(year=1970, month=1, day=1, tzinfo=UTC)
 
 
+# TODO: rename, e.g. meeting group.
 class Meeting(models.Model):
     meeting_code = models.UUIDField(primary_key=True)
     display_name = models.CharField(max_length=100)
@@ -21,7 +22,7 @@ class Meeting(models.Model):
 
 
 class MeetingRecord(models.Model):
-    meeting_record = models.UUIDField(primary_key=True)
+    record_id = models.UUIDField(primary_key=True)
     meeting = models.ForeignKey(Meeting, on_delete=models.PROTECT)
 
     meeting_method = models.TextField()
@@ -29,9 +30,10 @@ class MeetingRecord(models.Model):
     online_meeting_link = models.TextField()
     meeting_start_time = models.DateTimeField()
     meeting_end_time = models.DateTimeField()
-    confirmed_attendant_codes = models.TextField()
-    pending_attendant_codes = models.TextField()
-    denied_attendant_codes = models.TextField()
+    # {UUID: PENDING|CONFIRM|DENY}
+    attendant_code_to_status = models.TextField()
+    # {invitation code: UUID}
+    invitation_code_to_attendant_code = models.TextField()
 
 
 class MeetingPreference(models.Model):
@@ -72,5 +74,5 @@ class MeetingPreference(models.Model):
 
 class MeetingAttendance(models.Model):
     attendant_preference = models.ForeignKey(MeetingPreference, on_delete=models.PROTECT)
-    last_invitation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
-    last_confirmation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
+    latest_invitation_meeting_record = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
+    latest_confirmation_meeting_record = models.DateTimeField(default=DEFAULT_INITIAL_DATE)

@@ -15,5 +15,6 @@ urlpatterns = [
 
     path('meeting_preference/', views.meeting_preference, name='meeting_preference'),
     path('meeting_generation/', views.meeting_generation, name='meeting_generation'),
-    path('email_verification/<str:verification_code>', views.email_verification, name='email_verification')
+    path('email_verification/<str:verification_code>', views.email_verification, name='email_verification'),
+    path('confirm_invitation/<str:meeting_record_id>/<str:invitation_code>', views.confirm_invitation, name='confirm_invitation')
 ]

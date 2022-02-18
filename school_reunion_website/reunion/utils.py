@@ -13,6 +13,9 @@ import datetime
 DEFAULT_HOLIDAY_YEARS = (datetime.datetime.utcnow().year, datetime.datetime.utcnow().year+1)
 NEAR_WEEKEND_DAYS = {0, 4, 5, 6}
 VERIFIED_EMAIL_STATUS = 'Verified'
+ATTENDANT_PENDING_STATUS = 'PENDING'
+ATTENDANT_CONFIRM_STATUS = 'CONFIRM'
+ATTENDANT_DENY_STATUS = 'DENY'
 COUNTRY_TO_HOLIDAY_MAP_BY_YEAR = {}
 REPEAT_EACH_YEAR = 'repeat_each_year'
 REPEAT_EACH_MONTH = 'repeat_each_month'
