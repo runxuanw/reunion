@@ -149,7 +149,7 @@ def confirm_invitation(request, meeting_record_id, invitation_code):
         attendance: MeetingAttendance = MeetingAttendance.objects.get(
             attendant_preference=preference)
         attendance.latest_confirmation_meeting_record = max(
-            record.meeting_start_time, attendance.latest_confirmation_meeting_record)
+            record.meeting_start_time, attendance.latest_confirmation_time)
         update_meeting_record_attendance(record, attendance)
 
         # TODO: implement send_scheduled_meeting_details

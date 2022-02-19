@@ -333,7 +333,7 @@ def _sanitize_with_minimal_meeting_value_preference_one_time(
 
 # This is an approximation of meeting value. The meeting records should be used for better estimation.
 def _get_participant_meeting_value(attendance: MeetingAttendance, now: datetime.datetime):
-    return (now - attendance.last_confirmation_time).days
+    return (now - attendance.latest_confirmation_time).days
 
 
 def get_utc_now():
@@ -467,9 +467,10 @@ def get_feasible_meeting_dates_with_participants(
             attendant_preference=meeting_preference.registered_attendant_code)
         history_meetings_attendance.append(attendance)
         available_dates = get_available_dates(meeting_preference, start=start, until=until)
-        # Also consider the notification sent but haven't received a reply: last_invitation_time.
+        # Also consider the notification sent but haven't received a reply: latest_invitation_time.
         _, earliest_acceptable_date = _get_unavailable_date_range(
-            max(attendance.last_confirmation_time, attendance.last_invitation_time), meeting_preference)
+            max(attendance.latest_confirmation_time, attendance.latest_invitation_time),
+                meeting_preference)
         for available_date in available_dates:
             if earliest_acceptable_date <= available_date:
                 date_to_potential_participants[available_date].append(meeting_preference)

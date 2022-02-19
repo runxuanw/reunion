@@ -74,5 +74,5 @@ class MeetingPreference(models.Model):
 
 class MeetingAttendance(models.Model):
     attendant_preference = models.ForeignKey(MeetingPreference, on_delete=models.PROTECT)
-    latest_invitation_meeting_record = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
-    latest_confirmation_meeting_record = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
+    latest_invitation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)
+    latest_confirmation_time = models.DateTimeField(default=DEFAULT_INITIAL_DATE)

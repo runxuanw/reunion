@@ -14,6 +14,7 @@ from .emails import SCHOOL_REUNION_ADMIN_EMAIL
 from .utils import VERIFIED_EMAIL_STATUS
 from .schedule_meeting import get_available_dates, get_feasible_meeting_dates_with_participants, MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL
 from typing import Optional, Dict
+from django.db import transaction
 
 
 TESTING_EMAIL_ADDRESS = 'school.reunion.testing@gmail.com'
@@ -47,6 +48,14 @@ def _create_preference_form(client, meeting_code, email=TESTING_EMAIL_ADDRESS,
     return client.post(
         path='/meeting_preference/',
         data=post_data)
+
+
+@transaction.atomic
+def _set_all_preference_email_verified(meeting: Meeting):
+    meeting_preferences = MeetingPreference.objects.filter(meeting=meeting.meeting_code)
+    for preference in meeting_preferences:
+        preference.email_verification_code = VERIFIED_EMAIL_STATUS
+        preference.save()
 
 
 class MeetingPreferenceViewTests(TestCase):
@@ -194,8 +203,7 @@ class MeetingPreferenceViewTests(TestCase):
                                 'minimal_meeting_size': '3',
                                 'prefer_to_attend_every_n_months': '12',
                                 'email': 'dummy3@gmail.com'})
-
-        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        _set_all_preference_email_verified(meeting)
         dates_with_participants = get_feasible_meeting_dates_with_participants(
             meeting, start=datetime.date(2021, 12, 1), until=datetime.date(2022, 1, 1))
 
@@ -229,8 +237,7 @@ class MeetingPreferenceViewTests(TestCase):
                                 'minimal_meeting_size': '3',
                                 'prefer_to_attend_every_n_months': '6',
                                 'email': 'dummy3@gmail.com'})
-
-        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        _set_all_preference_email_verified(meeting)
 
         # Non-deterministic behavior, run the test multiple times.
         for i in range(10):
@@ -285,11 +292,12 @@ class MeetingPreferenceViewTests(TestCase):
                                 'email': 'dummy4@gmail.com',
                                 'name': 'D',
                                 'weighted_attendants': '[{"value":"A:-10"}, {"value":"B:11"}]'})
+        _set_all_preference_email_verified(meeting)
         # Set C attend the meeting recently.
         recent_participant: MeetingPreference = MeetingPreference.objects.filter(name='C')[0]
         attendance: MeetingAttendance = MeetingAttendance.objects.get(
             attendant_preference=recent_participant)
-        attendance.last_confirmation_time = datetime.datetime(2021, 1, 1)
+        attendance.latest_confirmation_time = datetime.datetime(2021, 1, 1)
         attendance.save()
 
         meeting = Meeting.objects.get(meeting_code=self.meeting_code)
@@ -340,11 +348,12 @@ class MeetingPreferenceViewTests(TestCase):
                                 'email': 'dummy4@gmail.com',
                                 'name': 'D',
                                 'weighted_attendants': '[{"value":"A:-10"},{"value":"B:10"}]'})
+        _set_all_preference_email_verified(meeting)
         # Set C attend the meeting recently.
         recent_participant: MeetingPreference = MeetingPreference.objects.filter(name='C')[0]
         attendance: MeetingAttendance = MeetingAttendance.objects.get(
             attendant_preference=recent_participant)
-        attendance.last_confirmation_time = datetime.datetime(2021, 1, 1, tzinfo=datetime.timezone.utc)
+        attendance.latest_confirmation_time = datetime.datetime(2021, 1, 1, tzinfo=datetime.timezone.utc)
         attendance.save()
 
         meeting = Meeting.objects.get(meeting_code=self.meeting_code)
