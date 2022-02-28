@@ -105,7 +105,6 @@ def meeting_generation(request):
         meeting.code_max_usage = request.POST['code_max_usage']
         meeting.code_available_usage = request.POST['code_max_usage']
         meeting.contact_email = request.POST['contact_email']
-        meeting.meeting_code = meeting_code
         meeting.save()
         request.session['pop_message'] = f'Created Meeting with Code: {meeting_code}'
         return redirect('reunion:index')
@@ -152,5 +151,4 @@ def confirm_invitation(request, meeting_record_id, invitation_code):
             record.meeting_start_time, attendance.latest_confirmation_time)
         update_meeting_record_attendance(record, attendance)
 
-        # TODO: implement send_scheduled_meeting_details
-        send_scheduled_meeting_details()
+        send_scheduled_meeting_details(preference, record)

@@ -1,3 +1,5 @@
+"""Includes all constants for models and utility functions."""
+
 import collections
 
 from django.db import transaction
@@ -26,6 +28,9 @@ REPEAT_OPTIONS = [(REPEAT_EACH_YEAR, 'repeat each year'),
                   (REPEAT_EACH_WEEK, 'repeat each week'),
                   (NO_REPEAT, 'no repeat')]
 REPEAT_OPTIONS_SET = set([option[0] for option in REPEAT_OPTIONS])
+
+MEETING_RECORD_STATUS_INITIALIZED = 'initialized'
+MEETING_RECORD_STATUS_FINALIZED = 'finalized'
 
 
 @dataclasses.dataclass

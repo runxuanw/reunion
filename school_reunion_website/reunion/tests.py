@@ -12,7 +12,7 @@ import uuid
 from django.core import mail
 from .emails import SCHOOL_REUNION_ADMIN_EMAIL
 from .utils import VERIFIED_EMAIL_STATUS
-from .schedule_meeting import get_available_dates, get_feasible_meeting_dates_with_participants, MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL
+from .schedule_meeting import schedule_meetings, get_available_dates, get_feasible_meeting_dates_with_participants, MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL, SCHEDULE_MEETINGS_START_FROM_NOW, NOTIFY_MEETINGS_UNTIL_FROM_NOW
 from typing import Optional, Dict
 from django.db import transaction
 
@@ -366,5 +366,43 @@ class MeetingPreferenceViewTests(TestCase):
         self.assertCountEqual(['A', 'B'], [p.name for p in dates_with_participants[0][1]])
         self.assertCountEqual(['C', 'D'], [p.name for p in dates_with_participants[1][1]])
 
-    def test_get_feasible_meeting_dates_with_meeting_record_considered(self):
-        pass
+    def test_send_meeting_link_after_the_invitation_is_confirmed(self):
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        meeting.code_available_usage = 10
+        meeting.code_max_usage = 10
+        meeting.save()
+        # Better to fake get_utc_now and fixed time.
+        date_will_be_notified_start = datetime.datetime.utcnow() + NOTIFY_MEETINGS_UNTIL_FROM_NOW - datetime.timedelta(days=7)
+        date_will_be_notified_end = datetime.datetime.utcnow() + NOTIFY_MEETINGS_UNTIL_FROM_NOW - datetime.timedelta(days=3)
+
+        selected_attending_dates_str = f"{date_will_be_notified_start.strftime('%m/%d/%Y')} - {date_will_be_notified_end.strftime('%m/%d/%Y')}"
+        print(f'[{{"value":"{selected_attending_dates_str}:no_repeat"}}]')
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': f'[{{"value":"{selected_attending_dates_str}:no_repeat"}}]',
+                                'minimal_meeting_size': '2',
+                                'minimal_meeting_value': '2',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy@gmail.com',
+                                'name': 'A'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': f'[{{"value":"{selected_attending_dates_str}:no_repeat"}}]',
+                                'minimal_meeting_size': '2',
+                                'minimal_meeting_value': '2',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy2@gmail.com',
+                                'name': 'B'})
+        _create_preference_form(
+            self.client, self.meeting_code,
+            override_post_data={'selected_attending_dates': f'[{{"value":"{selected_attending_dates_str}:no_repeat"}}]',
+                                'minimal_meeting_size': '2',
+                                'minimal_meeting_value': '2',
+                                'prefer_to_attend_every_n_months': '12',
+                                'email': 'dummy3@gmail.com',
+                                'name': 'C'})
+        _set_all_preference_email_verified(meeting)
+
+        meeting = Meeting.objects.get(meeting_code=self.meeting_code)
+        schedule_meetings(meeting)
+        # TODO/unfinished!!!: add assertion for sent confirmation email, reply and meeting link sent.

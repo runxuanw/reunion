@@ -2,6 +2,7 @@ import datetime
 from pytz import UTC
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+import uuid
 
 
 DEFAULT_INITIAL_DATE = datetime.datetime(year=1970, month=1, day=1, tzinfo=UTC)
@@ -22,8 +23,9 @@ class Meeting(models.Model):
 
 
 class MeetingRecord(models.Model):
-    record_id = models.UUIDField(primary_key=True)
+    record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meeting = models.ForeignKey(Meeting, on_delete=models.PROTECT)
+    meeting_status = models.TextField()
 
     meeting_method = models.TextField()
     offline_meeting_locations = models.TextField()
@@ -46,6 +48,11 @@ class MeetingPreference(models.Model):
     # Time and location:
     prefer_to_attend_every_n_months = models.IntegerField()
     selected_attending_dates = models.TextField(blank=True)
+    # TODO/p0, add largest_meeting_regardless_dates option.
+    #  The logic change would be adding a set of participants, people in the set would always be counted once
+    #  in one date, after that date is picked remove selected participants from the set,
+    #  if absolute # of people in dates are the same, then pick the date
+    #  with originally most selected (further tier would be random selected).
     earliest_meeting_time = models.TimeField(max_length=50, blank=True)
     latest_meeting_time = models.TimeField(max_length=50, blank=True)
     # For both online and offline.

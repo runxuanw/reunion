@@ -2,12 +2,13 @@ import datetime
 import uuid
 
 from .models import MeetingPreference, Meeting, MeetingRecord, MeetingAttendance
-from .utils import ATTENDANT_PENDING_STATUS, VERIFIED_EMAIL_STATUS, get_country_to_holidays_map, REPEAT_OPTIONS_SET, NO_REPEAT, REPEAT_EACH_YEAR, REPEAT_EACH_WEEK, REPEAT_EACH_MONTH
+from .utils import ATTENDANT_PENDING_STATUS, VERIFIED_EMAIL_STATUS, get_country_to_holidays_map, REPEAT_OPTIONS_SET, NO_REPEAT, REPEAT_EACH_YEAR, REPEAT_EACH_WEEK, REPEAT_EACH_MONTH, MEETING_RECORD_STATUS_INITIALIZED, MEETING_RECORD_STATUS_FINALIZED, ATTENDANT_CONFIRM_STATUS
 import collections
 from typing import List, Dict, Optional, Tuple, Union, Set
 import random
-from .emails import send_scheduled_meeting_notification
+from .emails import send_scheduled_meeting_notification, send_final_meeting_reminder_emails
 import json
+from .create_online_meeting import create_meeting_link
 
 
 ALL_DATES = 'all_dates'
@@ -15,6 +16,8 @@ ALL_DATES = 'all_dates'
 MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL = 0.7
 # Max participate value for people never attended the meeting: 365 * 4
 MAX_PARTICIPATE_VALUE = 1460
+SCHEDULE_MEETINGS_START_FROM_NOW = datetime.timedelta(days=60)
+NOTIFY_MEETINGS_UNTIL_FROM_NOW = datetime.timedelta(days=90)
 
 # 1. {date: available people count with relax of 1 week} for 1 year from current time. (done)
 # 2. iteratively generate meeting from most count date to least count date
@@ -493,37 +496,40 @@ def get_feasible_meeting_dates_with_participants(
     return picked_dates_with_participants_preference
 
 
-# TODO: to be implemented
-def create_online_meeting_link():
-    return ''
-
-
 def arrange_new_meeting(host_meeting: Meeting,
                         meeting_date: datetime.date,
                         participants_preference: List[MeetingPreference]):
-    record = MeetingRecord(meeting=host_meeting)
+    record = MeetingRecord(meeting=host_meeting, meeting_status=MEETING_RECORD_STATUS_INITIALIZED)
     # TODO: timezone and start time to be implemented
-    record.meeting_start_time = meeting_date
+    record.meeting_start_time = datetime.datetime.combine(
+        meeting_date, datetime.datetime.min.time(), datetime.timezone.utc)
     # TODO: timezone and end time to be implemented
-    record.meeting_end_time = meeting_date + datetime.timedelta(days=1)
+    record.meeting_end_time = datetime.datetime.combine(
+        meeting_date, datetime.datetime.min.time(), datetime.timezone.utc) + datetime.timedelta(days=1)
     # TODO: offline meeting location to be implemented
-    record.online_meeting_link = create_online_meeting_link()
+    record.online_meeting_link = create_meeting_link(
+        host_meeting.display_name, record.meeting_start_time, record.meeting_end_time)
     invitation_code_to_attendant_code = (
-        {str(uuid.uuid4()): p.registered_attendant_code for p in participants_preference})
+        {str(uuid.uuid4()): str(p.registered_attendant_code) for p in participants_preference})
+    attendant_code_to_invitation_code = (
+        {a: i for i, a in invitation_code_to_attendant_code.items()})
     record.invitation_link_to_attendant_code = json.dumps(invitation_code_to_attendant_code)
     record.attendant_code_to_status = json.dumps(
-        {p.registered_attendant_code: ATTENDANT_PENDING_STATUS for p in participants_preference})
+        {str(p.registered_attendant_code): ATTENDANT_PENDING_STATUS for p in participants_preference})
     record.save()
     # TODO: update last invitation time?
     for participant_preference in participants_preference:
-        send_scheduled_meeting_notification(record, participant_preference, participants_preference)
+        send_scheduled_meeting_notification(
+            record, attendant_code_to_invitation_code.get(participant_preference.registered_attendant_code),
+            participant_preference, participants_preference)
 
 
-def schedule_meeting(meeting: Meeting):
-    utcnow = datetime.datetime.get_utc_now()
-    schedule_start_date = (utcnow + datetime.timedelta(days=60)).date()
-    schedule_until_date = (utcnow + datetime.timedelta(days=365+60)).date()
-    notification_until_date = (utcnow + datetime.timedelta(days=90)).date()
+# TODO: run in background thread & add test.
+def schedule_meetings(meeting: Meeting):
+    utcnow = get_utc_now()
+    schedule_start_date = (utcnow + SCHEDULE_MEETINGS_START_FROM_NOW).date()
+    schedule_until_date = (utcnow + datetime.timedelta(days=365) + SCHEDULE_MEETINGS_START_FROM_NOW).date()
+    notification_until_date = (utcnow + NOTIFY_MEETINGS_UNTIL_FROM_NOW).date()
     dates_with_participants_preference = get_feasible_meeting_dates_with_participants(
         meeting,
         start=schedule_start_date,
@@ -533,3 +539,24 @@ def schedule_meeting(meeting: Meeting):
         # don't send notification if it is more than three months.
         if schedule_start_date <= date <= notification_until_date:
             arrange_new_meeting(meeting, date, participants_preference)
+
+
+# TODO: run in background thread & add test.
+def send_final_meeting_notification():
+    utcnow = get_utc_now()
+    final_meeting_start_date = (utcnow + datetime.timedelta(days=14)).date()
+    final_meeting_end_date = (utcnow + datetime.timedelta(days=23)).date()
+    pending_meeting_records = MeetingRecord.objects.filter(meeting_status=MEETING_RECORD_STATUS_INITIALIZED)
+    for record in pending_meeting_records:
+        all_participants = []
+        if final_meeting_start_date < record.meeting_start_time < final_meeting_end_date:
+            attendant_code_to_status = json.loads(record.attendant_code_to_status)
+            for attendant_code, status in attendant_code_to_status.items():
+                if status == ATTENDANT_CONFIRM_STATUS:
+                    preference = MeetingPreference.objects.filter(registered_attendant_code=attendant_code)
+                    if preference:
+                        all_participants.append(preference)
+            for participant in all_participants:
+                send_final_meeting_reminder_emails(participant, all_participants, record)
+            record.meeting_status = MEETING_RECORD_STATUS_FINALIZED
+            record.save()
