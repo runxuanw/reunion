@@ -513,14 +513,14 @@ def arrange_new_meeting(host_meeting: Meeting,
         {str(uuid.uuid4()): str(p.registered_attendant_code) for p in participants_preference})
     attendant_code_to_invitation_code = (
         {a: i for i, a in invitation_code_to_attendant_code.items()})
-    record.invitation_link_to_attendant_code = json.dumps(invitation_code_to_attendant_code)
+    record.invitation_code_to_attendant_code = json.dumps(invitation_code_to_attendant_code)
     record.attendant_code_to_status = json.dumps(
         {str(p.registered_attendant_code): ATTENDANT_PENDING_STATUS for p in participants_preference})
     record.save()
     # TODO: update last invitation time?
     for participant_preference in participants_preference:
         send_scheduled_meeting_notification(
-            record, attendant_code_to_invitation_code.get(participant_preference.registered_attendant_code),
+            record, attendant_code_to_invitation_code.get(str(participant_preference.registered_attendant_code)),
             participant_preference, participants_preference)
 
 

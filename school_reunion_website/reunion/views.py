@@ -1,6 +1,6 @@
 import uuid
 
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from .utils import valid_request_from_forms, record_new_meeting_preference, VERIFIED_EMAIL_STATUS, ATTENDANT_DENY_STATUS, ATTENDANT_PENDING_STATUS, ATTENDANT_CONFIRM_STATUS
 from .emails import verify_registered_email_address, send_scheduled_meeting_details
@@ -128,7 +128,6 @@ def update_meeting_record_attendance(meeting_record, meeting_attendance):
     meeting_attendance.save()
 
 
-# TODO: continue, add unit tests
 def confirm_invitation(request, meeting_record_id, invitation_code):
     if request.method == 'GET':
         record: MeetingRecord = get_object_or_404(MeetingRecord, record_id=meeting_record_id)
@@ -144,7 +143,7 @@ def confirm_invitation(request, meeting_record_id, invitation_code):
         attendant_code_to_status[attendant_code] = ATTENDANT_CONFIRM_STATUS
         record.attendant_code_to_status = json.dumps(attendant_code_to_status)
         # update MeetingAttendant
-        preference = MeetingPreference.objects.filter(registered_attendant_code=attendant_code)
+        preference = MeetingPreference.objects.get(registered_attendant_code=attendant_code)
         attendance: MeetingAttendance = MeetingAttendance.objects.get(
             attendant_preference=preference)
         attendance.latest_confirmation_meeting_record = max(
@@ -152,3 +151,4 @@ def confirm_invitation(request, meeting_record_id, invitation_code):
         update_meeting_record_attendance(record, attendance)
 
         send_scheduled_meeting_details(preference, record)
+        return HttpResponse(content=b'Attendance confirmed!')

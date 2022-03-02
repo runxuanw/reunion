@@ -1,20 +1,22 @@
 """Run test under manager.py directory with command:
     set DJANGO_SETTINGS_MODULE=school_reunion_website.settings; python3.9 manage.py test"""
 import datetime
+import re
 import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from django.test import TestCase
 from django.test import Client
-from .models import Meeting, MeetingPreference, MeetingAttendance
+from .models import Meeting, MeetingPreference, MeetingAttendance, MeetingRecord
 import uuid
 from django.core import mail
-from .emails import SCHOOL_REUNION_ADMIN_EMAIL
-from .utils import VERIFIED_EMAIL_STATUS
+from .emails import SCHOOL_REUNION_ADMIN_EMAIL, invitation_link
+from .utils import VERIFIED_EMAIL_STATUS, ATTENDANT_PENDING_STATUS, ATTENDANT_CONFIRM_STATUS
 from .schedule_meeting import schedule_meetings, get_available_dates, get_feasible_meeting_dates_with_participants, MIN_ATTENDING_INTERVAL_TO_PREFERRED_INTERVAL, SCHEDULE_MEETINGS_START_FROM_NOW, NOTIFY_MEETINGS_UNTIL_FROM_NOW
 from typing import Optional, Dict
 from django.db import transaction
+import json
 
 
 TESTING_EMAIL_ADDRESS = 'school.reunion.testing@gmail.com'
@@ -405,4 +407,29 @@ class MeetingPreferenceViewTests(TestCase):
 
         meeting = Meeting.objects.get(meeting_code=self.meeting_code)
         schedule_meetings(meeting)
-        # TODO/unfinished!!!: add assertion for sent confirmation email, reply and meeting link sent.
+
+        record: MeetingRecord = MeetingRecord.objects.get(meeting=meeting)
+        for code, status in json.loads(record.attendant_code_to_status).items():
+            self.assertEqual(status, ATTENDANT_PENDING_STATUS)
+        invitation_code_to_attendant_code = json.loads(record.invitation_code_to_attendant_code)
+        attendant_code_to_invitation_link = {attendant_code: invitation_link(record.record_id, invitation_code)
+                                             for invitation_code, attendant_code in invitation_code_to_attendant_code.items()}
+        # Check if invitation link is sent.
+        self.assertEqual(len(mail.outbox), 6)
+        for email in mail.outbox[3:6]:
+            self.assertEqual(len(email.to), 1)
+            self.assertIn(email.to[0], {'dummy@gmail.com', 'dummy2@gmail.com', 'dummy3@gmail.com'})
+            self.assertIn(email.from_email, SCHOOL_REUNION_ADMIN_EMAIL)
+            preference: MeetingPreference = MeetingPreference.objects.get(email=email.to[0])
+            tmp_link = attendant_code_to_invitation_link[str(preference.registered_attendant_code)]
+            self.assertIn(tmp_link, email.body)
+
+            # Reply for the email and see if meeting link is sent.
+            response = self.client.get(path=re.findall('(/confirm_invitation.*)>Click', tmp_link)[0])
+            self.assertEqual(response.status_code, 200)
+
+        for email in mail.outbox[-3:]:
+            self.assertIn(record.online_meeting_link, email.body)
+        record: MeetingRecord = MeetingRecord.objects.get(meeting=meeting)
+        for code, status in json.loads(record.attendant_code_to_status).items():
+            self.assertEqual(status, ATTENDANT_CONFIRM_STATUS)

@@ -23,7 +23,7 @@ def verify_registered_email_address(meeting_preference: MeetingPreference, meeti
     )
 
 
-def _invitation_link(record_id, invitation_id):
+def invitation_link(record_id, invitation_id):
     return f'<a href="https://127.0.0.1:8000/confirm_invitation/{record_id}/{invitation_id}>Click Me To Confirm</a>"'
 
 
@@ -34,7 +34,7 @@ def send_scheduled_meeting_notification(meeting_record: MeetingRecord,
     if not invitation_id:
         return
     message = (f'Please click the following link to confirm your attendance:'
-               f'\n{_invitation_link(meeting_record.record_id, invitation_id)}'
+               f'\n{invitation_link(meeting_record.record_id, invitation_id)}'
                f'\n'
                f'\nMeeting details'
                f'\n    Name: {meeting_record.meeting.display_name}'
