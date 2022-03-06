@@ -28,18 +28,21 @@ $(document).ready(function() {
         var name = $('#id_other_attendant').val();
         var weight = $('#id_other_attendant_weight').val();
         if(keycode == '13'){
+            // Don't submit form if enter is pressed. TODO: The effect seems to be global.
+            event.preventDefault();
             if (!name || !weight) {
                 alert('Attendant Name and Attendant Value must both be set!');
                 return;
             }
             weighted_attendants.addTags([`${name}:${weight}`]);
+            return false;
         }
     }
     $('#id_other_attendant').keypress(function(event){
-        addWeightedAttendant(event);
+        return addWeightedAttendant(event);
     });
     $('#id_other_attendant_weight').keypress(function(event){
-        addWeightedAttendant(event);
+        return addWeightedAttendant(event);
     });
 
     $.getJSON('/static/reunion/world-city.json', function(data) {

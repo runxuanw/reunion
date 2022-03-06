@@ -21,7 +21,7 @@
 <body style="padding: 20px;">
     <p><strong>{{ meeting_name }}</strong></p>
     {% block content %}
-    {% crispy form form.helper %}
+    {% crispy meeting_preference_form meeting_preference_form.helper %}
     {% endblock %}
 </body>
 </html>

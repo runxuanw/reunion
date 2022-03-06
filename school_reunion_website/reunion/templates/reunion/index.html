@@ -1,3 +1,4 @@
+{% load crispy_forms_tags %}
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -10,15 +11,9 @@
 </head>
 <body style="padding: 20px;">
 
-<form action="{% url 'reunion:meeting_preference' %}" method="post">
-    {% csrf_token %}
-    {{ entry_form }}
-    <button type="submit">JOIN MEETING/UPDATE PREFERENCE</button>
-</form>
-
-<form action="{% url 'reunion:meeting_generation' %}" method="get">
-    <button type="submit">Create New Meeting</button>
-</form>
+<div class="d-md-flex align-items-center justify-content-center vh-100">
+{% crispy entry_form entry_form.helper %}
+</div>
 
 <!--todo, make pop_message as windowed notification.-->
 {% if pop_message %}<p><strong>{{ pop_message }}</strong></p>{% endif %}

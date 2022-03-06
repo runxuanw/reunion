@@ -5,3 +5,10 @@ li a {
 body {
     background: white url("images/background.gif") no-repeat;
 }
+
+hr.hr-line {
+  position: relative;
+    border: none;
+    height: 1px;
+    background: #999;
+}

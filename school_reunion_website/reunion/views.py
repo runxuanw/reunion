@@ -21,6 +21,7 @@ def index(request):
     pop_message = request.session.get('pop_message')
     request.session['pop_message'] = None
     return render(request, 'reunion/index.html', {'entry_form': entry_form,
+                                                  # 'generation_entry_form': generation_entry_form,
                                                   'pop_message': pop_message})
 
 
@@ -89,8 +90,9 @@ def meeting_preference(request):
                 preference = get_object_or_404(MeetingPreference, pk=registered_attendant_code)
                 request.session['registered_attendant_code'] = registered_attendant_code
                 meeting_preference_form = MeetingPreferenceForm(instance=preference)
-            return render(request, 'reunion/meeting_preference.html', {'form': meeting_preference_form,
-                                                                       'meeting_name': meeting.display_name})
+            return render(request, 'reunion/meeting_preference.html',
+                          {'meeting_preference_form': meeting_preference_form,
+                           'meeting_name': meeting.display_name})
 
 
 def meeting_generation(request):
@@ -101,6 +103,7 @@ def meeting_generation(request):
         while Meeting.objects.filter(meeting_code=meeting_code).exists():
             meeting_code = uuid.uuid4()
         meeting = Meeting()
+        meeting.meeting_code = meeting_code
         meeting.display_name = request.POST['display_name']
         meeting.code_max_usage = request.POST['code_max_usage']
         meeting.code_available_usage = request.POST['code_max_usage']
@@ -109,7 +112,7 @@ def meeting_generation(request):
         request.session['pop_message'] = f'Created Meeting with Code: {meeting_code}'
         return redirect('reunion:index')
     generation_form = MeetingGenerationForm()
-    return render(request, 'reunion/meeting_generation.html', {'form': generation_form})
+    return render(request, 'reunion/meeting_generation.html', {'generation_form': generation_form})
 
 
 def email_verification(request, verification_code):

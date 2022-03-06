@@ -3,10 +3,11 @@ from .models import MeetingPreference, Meeting
 from crispy_forms.helper import FormHelper
 from crispy_forms.bootstrap import InlineRadios, FormActions, InlineCheckboxes
 from bootstrap_datepicker_plus.widgets import TimePickerInput
-from crispy_forms.layout import Layout, Submit, Row, Column, Button
+from crispy_forms.layout import Layout, Submit, Row, Column, Button, ButtonHolder, HTML, Div
 from .utils import get_country_to_holidays_map, REPEAT_OPTIONS
 from taggit.forms import TagField, TagWidget
 import ast
+from django.urls import reverse
 
 
 class TagifyField(TagField):
@@ -61,10 +62,25 @@ class EntryForm(forms.Form):
 
         self.helper = FormHelper
         self.helper.form_method = 'post'
+        self.helper.form_action = reverse('reunion:meeting_preference')
+        self.helper.form_class = 'col-md-4'
         self.helper.layout = Layout(
-            'meeting_code',
-            'registered_attendant_code',
-            Submit('submit', 'Submit', css_class='bin-success')
+
+            Row(
+                Column('meeting_code')),
+            Row(
+                Column('registered_attendant_code')),
+            Row(
+                FormActions(Submit('submit', 'JOIN MEETING/UPDATE PREFERENCE', css_class='bin-success')),
+                css_class='text-center my-2'),
+            Row(
+                HTML('<hr class="hr-line">'),
+                css_class='form-row justify-content-center text-center my-4'),
+            Row(
+                ButtonHolder(
+                    HTML('<a class="btn btn-primary bin-success"'
+                         ' href={% url "reunion:meeting_generation" %}>CREATE NEW MEETING</a>')),
+                css_class='form-row justify-content-center text-center'),
         )
 
 
@@ -78,6 +94,7 @@ class MeetingGenerationForm(forms.ModelForm):
 
         self.helper = FormHelper
         self.helper.form_method = 'post'
+        self.helper.form_action = reverse('reunion:meeting_generation')
         self.helper.layout = Layout(
             'display_name',
             'code_max_usage',
@@ -139,6 +156,7 @@ class MeetingPreferenceForm(forms.ModelForm):
 
         self.helper = FormHelper
         self.helper.form_method = 'post'
+        self.helper.form_action = reverse('reunion:meeting_preference')
         self.helper.layout = Layout(
             Row(
                 Column('name', css_class='form-group col-md-4 mb-0'),
