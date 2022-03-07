@@ -109,7 +109,7 @@ def meeting_generation(request):
         meeting.code_available_usage = request.POST['code_max_usage']
         meeting.contact_email = request.POST['contact_email']
         meeting.save()
-        request.session['pop_message'] = f'Created Meeting with Code: {meeting_code}'
+        request.session['pop_message'] = f'Created Meeting with Code (please record this): {meeting_code}'
         return redirect('reunion:index')
     generation_form = MeetingGenerationForm()
     return render(request, 'reunion/meeting_generation.html', {'generation_form': generation_form})

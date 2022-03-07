@@ -1,8 +1,11 @@
 
-Feature:
-Meeting Scheduler
-Meeting Confirmation
-Online Meeting Generation
+Support language: Chinese
+Deploy on cloud -> dev version ready!
+Encrypt user data
+Online Meeting Generation -> verify any user can join
+Beta Testing
+
+
 Feedback in Website
     Optional:
     Collect Feedback After Meeting

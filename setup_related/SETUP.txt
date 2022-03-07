@@ -1,5 +1,10 @@
 python3.9
 postgres 13
+https://linuxapt.com/blog/531-install-postgresql-13-on-rocky-linux
+For pg_config missed:
+install psycopg2-binary
+Setup user:
+https://enterprise.arcgis.com/en/server/10.3/cloud/amazon/change-default-database-passwords-on-linux.htm
 TODO add python_requirements.txt
 
 django DB tutorial
