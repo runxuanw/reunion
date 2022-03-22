@@ -94,12 +94,16 @@ class MeetingGenerationForm(forms.ModelForm):
 
         self.helper = FormHelper
         self.helper.form_method = 'post'
+        self.helper.form_class = 'col-md-4'
         self.helper.form_action = reverse('reunion:meeting_generation')
         self.helper.layout = Layout(
             'display_name',
             'code_max_usage',
             'contact_email',
-            Submit('submit', 'Submit', css_class='bin-success')
+            Div(
+                Submit('submit', 'CREATE NEW MEETING', css_class='bin-success'),
+                css_class='form-row justify-content-center text-center my-4'
+            )
         )
 
 
@@ -157,6 +161,7 @@ class MeetingPreferenceForm(forms.ModelForm):
         self.helper = FormHelper
         self.helper.form_method = 'post'
         self.helper.form_action = reverse('reunion:meeting_preference')
+        self.helper.form_class = 'col-md-12'
         self.helper.layout = Layout(
             Row(
                 Column('name', css_class='form-group col-md-4 mb-0'),
