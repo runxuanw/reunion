@@ -21,7 +21,6 @@ def index(request):
     pop_message = request.session.get('pop_message')
     request.session['pop_message'] = None
     return render(request, 'reunion/index.html', {'entry_form': entry_form,
-                                                  # 'generation_entry_form': generation_entry_form,
                                                   'pop_message': pop_message})
 
 
@@ -62,8 +61,8 @@ def meeting_preference(request):
 
                 verify_registered_email_address(preference, meeting.display_name)
                 request.session['pop_message'] = (f'Thank you for registration!'
-                                                  f'\nYour Registered Attendant Code is: {registered_attendant_code}'
-                                                  f'\nPlease check your inbox for verification email '
+                                                  f'\\nYour Registered Attendant Code is:\\n{registered_attendant_code}'
+                                                  f'\\nPlease check your inbox for verification email '
                                                   f'to complete the registration.')
 
                 return redirect('reunion:index')
@@ -109,7 +108,7 @@ def meeting_generation(request):
         meeting.code_available_usage = request.POST['code_max_usage']
         meeting.contact_email = request.POST['contact_email']
         meeting.save()
-        request.session['pop_message'] = f'Created Meeting with Code (please record this): {meeting_code}'
+        request.session['pop_message'] = f'Created Meeting with Code (please record this):\\n{meeting_code}'
         return redirect('reunion:index')
     generation_form = MeetingGenerationForm()
     return render(request, 'reunion/meeting_generation.html', {'generation_form': generation_form})

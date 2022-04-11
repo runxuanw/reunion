@@ -78,6 +78,15 @@ class MeetingPreference(models.Model):
     class Meta:
         unique_together = (("meeting", "name"), ("meeting", "email"),)
 
+    def save(self, **kwargs):
+        if not self.earliest_meeting_time:
+            self.earliest_meeting_time = '10:00'
+        if not self.latest_meeting_time:
+            self.latest_meeting_time = '21:00'
+        if not self.preferred_meeting_duration:
+            self.preferred_meeting_duration = '4:00'
+        super().save(kwargs)
+
 
 class MeetingAttendance(models.Model):
     attendant_preference = models.ForeignKey(MeetingPreference, on_delete=models.PROTECT)
